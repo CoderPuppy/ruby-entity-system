@@ -1,0 +1,1 @@
+EntitySystem::Component::BoundingBox = EntitySystem::Component.new :rect

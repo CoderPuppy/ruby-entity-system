@@ -1,0 +1,1 @@
+EntitySystem::Component::Tracked = EntitySystem::Component.new

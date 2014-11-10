@@ -1,0 +1,1 @@
+EntitySystem::Component::Identity = EntitySystem::Component.new :id

@@ -1,0 +1,1 @@
+EntitySystem::Component::DebugName = EntitySystem::Component.new :name

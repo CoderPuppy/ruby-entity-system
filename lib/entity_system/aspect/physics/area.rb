@@ -1,0 +1,1 @@
+EntitySystem::Component::Area = EntitySystem::Component.new :area
