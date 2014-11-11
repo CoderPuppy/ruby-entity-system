@@ -1,12 +1,10 @@
 module EntitySystem
 	class Game
-		attr_reader :entities
+		attr_reader :store
 		attr_reader :processes, :ticking_processes
 
 		def initialize(store)
-			@store = store
-			@entities = Hash.new
-			# @entities = EntityStore.new @store
+			@store = GameStore.new store
 			@processes = Set.new
 			@ticking_processes = []
 			@process_afters = {}
@@ -17,9 +15,7 @@ module EntitySystem
 		end
 
 		def spawn
-			entity = Entity.new self
-			@entities[entity.uuid] = entity
-			entity
+			Entity.new self, @store.spawn
 		end
 
 		def add cla, *args, &blk
@@ -31,7 +27,7 @@ module EntitySystem
 				@process_afters[before.id].first << process.id
 				@process_afters[before.id].last.last << process.id
 			end
-			@entities.each do |uuid, entity|
+			@store.entities.each do |id, entity|
 				process.add entity if process.handles? entity
 			end
 			process
@@ -84,11 +80,7 @@ module EntitySystem
 		end
 
 		def tick
-			@entities.each do |k, entity|
-				entity.components.each do |k, container|
-					container.tick
-				end
-			end
+			@store.tick
 			@ticking_processes.each do |process|
 				process.tick if process.enabled?
 			end

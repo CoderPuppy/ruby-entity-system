@@ -1,4 +1,4 @@
-EntitySystem::Component::Friction = EntitySystem::Component.new :amt
+EntitySystem::Component::Friction = EntitySystem::Component.new :x_amt, :y_amt
 class EntitySystem::Process::Friction < EntitySystem::Process
 	def before; [EntitySystem::Process::Velocity]; end
 
@@ -12,24 +12,24 @@ class EntitySystem::Process::Friction < EntitySystem::Process
 			fri = entity[EntitySystem::Component::Friction].next
 
 			if vel.x > 0
-				vel.x -= fri.amt.to_f
+				vel.x -= fri.x_amt.to_f
 				if vel.x < 0
 					vel.x = 0
 				end
 			elsif vel.x < 0
-				vel.x += fri.amt.to_f
+				vel.x += fri.x_amt.to_f
 				if vel.x > 0
 					vel.x = 0
 				end
 			end
 
 			if vel.y > 0
-				vel.y -= fri.amt.to_f
+				vel.y -= fri.y_amt.to_f
 				if vel.y < 0
 					vel.y = 0
 				end
 			elsif vel.y < 0
-				vel.y += fri.amt.to_f
+				vel.y += fri.y_amt.to_f
 				if vel.y > 0
 					vel.y = 0
 				end

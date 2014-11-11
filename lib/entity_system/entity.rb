@@ -1,32 +1,32 @@
 module EntitySystem
 	class ComponentContainer
-		attr_reader :next, :prev
+		attr_reader :game
+		attr_reader :eid
+		attr_reader :cla, :cid
 
-		def initialize(val)
-			@next = val
-			@prev = val
+		def initialize(game, eid, cla, cid)
+			@game = game
+			@eid = eid
+			@cla = cla
+			@cid = cid
 		end
 
-		def tick
-			@prev = @next.clone
-			self
+		def prev
+			Component::Synthesized.new(@game, @cla, @cid, :prev)
+		end
+
+		def next
+			Component::Synthesized.new(@game, @cla, @cid, :next)
 		end
 	end
 
 	class Entity
-		attr_reader :uuid
-		attr_reader :components
+		attr_reader :game
+		attr_reader :id
 
-		def initialize game
+		def initialize game, id
 			@game = game
-			@uuid = SecureRandom.uuid
-			@components = Hash.new
-		end
-
-		def tick
-			@components.each do |k, container|
-				container.tick
-			end
+			@id = id
 		end
 
 		def partial_tick(partial)
@@ -36,7 +36,7 @@ module EntitySystem
 		end
 
 		def << component
-			@components[component.id] = ComponentContainer.new component
+			cid = @game.store.add_component @id, component
 			@game.processes.each do |process|
 				process.add self if process.handles? self
 			end
@@ -49,11 +49,25 @@ module EntitySystem
 			end
 		end
 
-		def [] id
-			if id.respond_to? :id
-				id = id.id
+		def [] cla, id = nil
+			if cla.singular
+				id ||= "main"
 			end
-			@components[id]
+			if id == nil
+				@game.store.components(@id).map do |id|
+					cid = @game.store.component @id, cla.id, id
+					ComponentContainer.new(@game, @id, cla, id, cid)
+				end
+			else
+				cid = @game.store.component @id, cla.id, id
+				if cid
+					ComponentContainer.new(@game, @id, cla, cid)
+				end
+			end
+		end
+
+		def inspect
+			"#<Entity:#{@id}>"
 		end
 	end
 end
