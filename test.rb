@@ -19,31 +19,29 @@ module ESTest
 
 	# Physics
 	$player << Component::Area[:home]
-	$player << Component::Position[0, 0]
+	$player << Component::Position[0, 12]
 	$player << Component::Velocity[0, 0]
 	$player << Component::BoundingBox[-10, -10, 20, 20]
-
 	$player << Component::Collision[]
+
+	$player << Component::PhysicsCollision[]
 	$player << Component::Friction[1, 0]
 	$player << Component::Gravity[:down, 2, 20]
 
 	# Rendering
 	$player << Component::Tracked[]
 
-	# $platform = $game.spawn
+	$platform = $game.spawn
 
-	# $platform << Component::DebugName["Platform"]
-	# $platform << Component::Identity[:platform]
+	$platform << Component::DebugName["Platform"]
+	$platform << Component::Identity[:platform]
 
-	# # Physics
-	# $platform << Component::Area[:home]
-	# $platform << Component::Position[0, -1]
-	# $platform << Component::Velocity[0, 0]
-	# $platform << Component::BoundingBox[-50, 0, 100, 1]
+	# Physics
+	$platform << Component::Area[:home]
+	$platform << Component::Position[0, 0]
+	$platform << Component::BoundingBox[-50, 0, 100, 1]
 
-	# $platform << Component::Collision[]
-	# $platform << Component::Friction[1, 0]
-	# $platform << Component::Gravity[:down, 1, 2]
+	$platform << Component::Collision[]
 
 	# ap Hash[*store.range(gte: "component:next:0", lte: "component:next:9").find_all do |k, v|
 	# 	k.match /^component:next:\d+:/
@@ -51,7 +49,7 @@ module ESTest
 	# 	[k.gsub(/^component:next:/, ""), v]
 	# end]
 
-	$game.tick
+	# $game.tick
 
 	# render_sized = ->(text, size, side) {
 	# 	text = text.to_s
@@ -79,17 +77,17 @@ module ESTest
 	# 	[render_sized[pos.to_s.gsub(/\.0$/, ""), 4, :left], render_sized[render_vel[vel].gsub(/\.0$/, ""), 4, :left]].join " "
 	# 	# [render_sized[pos, 1, :left], render_sized[render_vel[vel], 2, :right]].join " "
 	# }
-	# render_state = ->() {
-	# 	pos = $player[Component::Position].next
-	# 	vel = $player[Component::Velocity].next
-	# 	puts " " + [
-	# 		render_axis_state[pos[0], vel[0]],
-	# 		render_axis_state[pos[1], vel[1]]
-	# 	].join(" | ")
-	# }
-	# render_state[]
-	# 20.times do |i|
-	# 	$game.tick
-	# 	render_state[]
-	# end
+	render_state = ->() {
+		# pos = $player[Component::Position].next
+		# vel = $player[Component::Velocity].next
+		# puts " " + [
+		# 	render_axis_state[pos[0], vel[0]],
+		# 	render_axis_state[pos[1], vel[1]]
+		# ].join(" | ")
+	}
+	render_state[]
+	20.times do |i|
+		$game.tick
+		render_state[]
+	end
 end

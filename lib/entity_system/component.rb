@@ -2,7 +2,7 @@ module EntitySystem
 	module Component
 		def self.new(*fields, &blk)
 			impl = proc do
-				def id
+				define_method :id do
 					self.class.id
 				end
 
@@ -12,10 +12,11 @@ module EntitySystem
 
 				def self.singular; true; end
 
-				def inspect
+				define_method :inspect do
 					if self.length > 0
-						# "#<#{self.class.name.split("::").last} #{self.to_h.map { |k, v| "#{k}=#{v.inspect}" }.join " "}>"
-						"#{self.class.name.split("::").last}(#{self.to_a.map(&:inspect).join ", "})"
+						# "#<#{self.class.name.split("::").last} #{self.to_h.map { |k, v| v.inspect }.join " "}>"
+						"#<#{self.class.name.split("::").last} #{self.to_h.map { |k, v| "#{k}=#{v.inspect}" }.join " "}>"
+						# "#{self.class.name.split("::").last}(#{self.to_a.map(&:inspect).join ", "})"
 					else
 						"#{self.class.name.split("::").last}"
 					end
@@ -44,65 +45,69 @@ module EntitySystem
 			end
 		end
 
-		class Synthesized
-			attr_reader :game
-			attr_reader :cla, :cid
-			attr_reader :time
+		def self.synthesize game, cla, cid, time
+			Class.new cla do
+				attr_reader :game
+				attr_reader :cla, :cid
+				attr_reader :time
 
-			def initialize(game, cla, cid, time)
-				@game = game
-				@cla = cla
-				@cid = cid
-				@time = time
+				define_singleton_method :name do
+					"#{cla.name}::Stored"
+				end
+
+				def initialize game, cla, cid, time
+					@game = game
+					@cla = cla
+					@cid = cid
+					@time = time
+				end
+
 				cla.members.each do |k|
-					self.define_singleton_method(k) do
+					define_method k do
 						@game.store.component_data(@cid, @time, k)
 					end
 
-					self.define_singleton_method("#{k}=") do |v|
+					define_method "#{k}=" do |v|
 						game.store.set_component_data(@cid, @time, k, v)
+						v
 					end
 				end
-			end
 
-			def id
-				@cla.id
-			end
+				def class; @cla; end
+				def === cla; super || @cla == cla; end
 
-			def [] k
-				if k.is_a? Fixnum
-					@game.store.component_data @cid, @time, cla.members[k]
-				else
-					@game.store.component_data @cid, @time, k
+				def [] k
+					if k.is_a? Fixnum
+						@game.store.component_data @cid, @time, cla.members[k]
+					else
+						@game.store.component_data @cid, @time, k
+					end
 				end
-			end
 
-			def []= k, v
-				if k.is_a? Fixnum
-					@game.store.set_component_data @cid, @time, cla.members[k], v
-				else
-					@game.store.set_component_data @cid, @time, k, v
+				def []= k, v
+					if k.is_a? Fixnum
+						@game.store.set_component_data @cid, @time, cla.members[k], v
+					else
+						@game.store.set_component_data @cid, @time, k, v
+					end
 				end
-			end
 
-			def to_a
-				@cla.members.map do |k|
-					@game.store.component_data @cid, @time, k
+				def to_a
+					@cla.members.map do |k|
+						@game.store.component_data @cid, @time, k
+					end
 				end
-			end
 
-			def length
-				@cla.members.length
-			end
-
-			def inspect
-				if self.length > 0
-					# "#<#{@cla.name.split("::").last} #{self.to_h.map { |k, v| "#{k}=#{v.inspect}" }.join " "}>"
-					"#{@cla.name.split("::").last}(#{self.to_a.map(&:inspect).join ", "})"
-				else
-					"#{@cla.name.split("::").last}"
+				def to_h
+					Hash[*@cla.members.flat_map do |k|
+						[k, @game.store.component_data(@cid, @time, k)]
+					end]
 				end
-			end
+
+				def length
+					@cla.members.length
+				end
+			end.new game, cla, cid, time
 		end
 	end
 end

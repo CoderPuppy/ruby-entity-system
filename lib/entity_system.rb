@@ -1,5 +1,6 @@
 require "set"
 require "awesome_print"
+require "json"
 
 module EntitySystem
 	class Box
@@ -55,11 +56,12 @@ require File.expand_path("../entity_system/store/cached.rb", __FILE__)
 # Aspects
 require File.expand_path("../entity_system/aspect/identity.rb", __FILE__)
 require File.expand_path("../entity_system/aspect/debug_name.rb", __FILE__)
-require File.expand_path("../entity_system/aspect/physics/area.rb", __FILE__)
-require File.expand_path("../entity_system/aspect/physics/position.rb", __FILE__)
-require File.expand_path("../entity_system/aspect/physics/velocity.rb", __FILE__)
-require File.expand_path("../entity_system/aspect/physics/bounding_box.rb", __FILE__)
+require File.expand_path("../entity_system/aspect/area.rb", __FILE__)
+require File.expand_path("../entity_system/aspect/position.rb", __FILE__)
+require File.expand_path("../entity_system/aspect/bounding_box.rb", __FILE__)
+require File.expand_path("../entity_system/aspect/collision.rb", __FILE__)
 require File.expand_path("../entity_system/aspect/physics/collision.rb", __FILE__)
+require File.expand_path("../entity_system/aspect/physics/velocity.rb", __FILE__)
 require File.expand_path("../entity_system/aspect/physics/friction.rb", __FILE__)
 require File.expand_path("../entity_system/aspect/physics/gravity.rb", __FILE__)
 require File.expand_path("../entity_system/aspect/rendering/tracked.rb", __FILE__)

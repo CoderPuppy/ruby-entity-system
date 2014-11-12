@@ -12,11 +12,11 @@ module EntitySystem
 		end
 
 		def prev
-			Component::Synthesized.new(@game, @cla, @cid, :prev)
+			Component.synthesize(@game, @cla, @cid, :prev)
 		end
 
 		def next
-			Component::Synthesized.new(@game, @cla, @cid, :next)
+			Component.synthesize(@game, @cla, @cid, :next)
 		end
 	end
 

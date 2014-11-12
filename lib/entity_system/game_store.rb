@@ -106,6 +106,9 @@ module EntitySystem
 			when NilClass
 				type = "nil"
 				v = ""
+			when Set
+				type = "set"
+				v = JSON.generate(v.map(&method(:serialize)))
 			else
 				raise "Can't find type for #{v.inspect}"
 			end
@@ -128,6 +131,8 @@ module EntitySystem
 				val = val.to_sym
 			when "nil"
 				val = nil
+			when "set"
+				val = Set.new JSON.parse(val).map(&method(:unserialize))
 			else
 				raise "Unknown type: #{type}"
 			end
