@@ -73,11 +73,16 @@ module EntitySystem
 				self.set_max_comp_id(eid, component.class.id, id + 1)
 			end
 			@store["component:next:#{cid}"] = "#{eid}-#{cid}"
-			@store["component:next:#{cid}:type"] = component.class.id
-			component.members.each_with_index do |k, i|
-				set_component_data cid, :next, k, component[i]
-			end
+			update_component cid, component, :next
 			@store["entity:#{eid}:#{component.class.id}:#{id}"] = cid
+			cid
+		end
+
+		def update_component cid, component, time = :next
+			@store["component:#{time}:#{cid}:type"] = component.class.id
+			component.members.each_with_index do |k, i|
+				set_component_data cid, time, k, component[i]
+			end
 			cid
 		end
 

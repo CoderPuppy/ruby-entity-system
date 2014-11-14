@@ -1,5 +1,5 @@
 module EntitySystem
-	Component::Velocity = Component.new :x, :y
+	Component::Velocity = Component.new x_speed: 1, x_distance: 0, y_speed: 1, y_distance: 0
 	class Process::Velocity < Process
 		def handles? entity
 			entity[Component::Velocity] && entity[Component::Position]
@@ -8,13 +8,17 @@ module EntitySystem
 		def tick
 			@entities.each do |entity|
 				pos = entity[Component::Position].next
-				vel = entity[Component::Velocity]
+				vel = entity[Component::Velocity].next
 
-				pos.x += vel.prev.x.to_f / 2
-				pos.y += vel.prev.y.to_f / 2
+				if vel.x_distance != 0
+					speed = [vel.x_speed, vel.x_distance.abs].min
+					pos.x += speed * vel.x_distance.to_f/vel.x_distance.abs
+				end
 
-				pos.x += vel.next.x.to_f / 2
-				pos.y += vel.next.y.to_f / 2
+				if vel.y_distance != 0
+					speed = [vel.y_speed, vel.y_distance.abs].min
+					pos.y += speed * vel.y_distance.to_f/vel.y_distance.abs
+				end
 			end
 		end
 	end

@@ -18,6 +18,10 @@ module EntitySystem
 		def next
 			Component.synthesize(@game, @cla, @cid, :next)
 		end
+
+		def next= nxt
+			@game.store.update_component @cid, nxt, :next
+		end
 	end
 
 	class Entity

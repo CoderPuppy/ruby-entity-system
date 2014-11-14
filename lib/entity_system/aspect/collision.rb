@@ -18,65 +18,11 @@ module EntitySystem
 			@entities.each do |entity|
 				pos = entity[Component::Position].next
 				box = entity[Component::BoundingBox].next
+				offset_box = box.offset pos
 
-				base_offset = 0
-
-				base_x = pos.x + box.x
-				base_y = pos.y + box.y
-
-				offset_x = 0
-				offset_y = 0
-
-				while base_offset < SECTION_SIZE
-					alignment = base_offset == 0 ? :A : :B
-
-					tmp_offset_x = 0
-					curr_x = ->() { base_x + offset_x + base_offset + tmp_offset_x }
-					if curr_x[] < 0
-						tmp_offset_x += ((curr_x[].abs.to_f/SECTION_SIZE).ceil * SECTION_SIZE).to_i
-					end
-
-					loop do
-						next_bound_x = ((curr_x[].abs.to_f/SECTION_SIZE).ceil * SECTION_SIZE).to_i - tmp_offset_x - base_offset
-						far_bound_x = base_x + box.width
-
-						tmp_offset_y = 0
-						curr_y = ->() { base_y + offset_y + base_offset + tmp_offset_y }
-						if curr_y[] < 0
-							tmp_offset_y += ((curr_y[].abs.to_f/SECTION_SIZE).ceil * SECTION_SIZE).to_i
-						end
-						
-						loop do
-							next_bound_y = ((curr_y[].abs.to_f/SECTION_SIZE).ceil * SECTION_SIZE).to_i - tmp_offset_y - base_offset
-							far_bound_y = base_y + box.height
-							
-							x = ((curr_x[].abs - (curr_x[].abs % SECTION_SIZE)) / SECTION_SIZE).to_i
-							if curr_x[] < 0
-								x *= -1
-								x -= 1
-							end
-
-							y = ((curr_y[].abs - (curr_y[].abs % SECTION_SIZE)) / SECTION_SIZE).to_i
-							if curr_y[] < 0
-								y *= -1
-								y -= 1
-							end
-
-							key = "#{alignment}#{x},#{y}"
-							# puts "#{entity.id} = #{key}"
-							sections[key] ||= Set.new
-							sections[key] << [entity, box]
-
-							break if next_bound_y > far_bound_y
-							offset_y += SECTION_SIZE
-						end
-						offset_y = 0
-
-						break if next_bound_x > far_bound_x
-						offset_x += SECTION_SIZE
-					end
-
-					base_offset += SECTION_SIZE/2
+				(offset_box.sections(:A) + offset_box.sections(:B)).each do |key|
+					sections[key] ||= Set.new
+					sections[key] << [entity, box]
 				end
 			end
 

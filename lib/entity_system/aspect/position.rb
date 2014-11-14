@@ -1,1 +1,3 @@
-EntitySystem::Component::Position = EntitySystem::Component.new :x, :y
+module EntitySystem
+	Component::Position = Component.new x: 0, y: 0
+end

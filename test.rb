@@ -8,8 +8,8 @@ module ESTest
 	$game = Game.new store
 	$game.add Process::Velocity
 	$game.add Process::Friction
-	$game.add Process::Gravity
 	$game.add Process::Collision
+	$game.add Process::PhysicsCollision
 	$game.init
 
 	$player = $game.spawn
@@ -20,13 +20,12 @@ module ESTest
 	# Physics
 	$player << Component::Area[:home]
 	$player << Component::Position[0, 12]
-	$player << Component::Velocity[0, 0]
+	$player << Component::Velocity[y_distance: -10]
 	$player << Component::BoundingBox[-10, -10, 20, 20]
 	$player << Component::Collision[]
 
 	$player << Component::PhysicsCollision[]
-	$player << Component::Friction[1, 0]
-	$player << Component::Gravity[:down, 2, 20]
+	$player << Component::Friction[]
 
 	# Rendering
 	$player << Component::Tracked[]
@@ -40,8 +39,9 @@ module ESTest
 	$platform << Component::Area[:home]
 	$platform << Component::Position[0, 0]
 	$platform << Component::BoundingBox[-50, 0, 100, 1]
-
 	$platform << Component::Collision[]
+
+	$platform << Component::PhysicsCollision[]
 
 	# ap Hash[*store.range(gte: "component:next:0", lte: "component:next:9").find_all do |k, v|
 	# 	k.match /^component:next:\d+:/
@@ -78,15 +78,18 @@ module ESTest
 	# 	# [render_sized[pos, 1, :left], render_sized[render_vel[vel], 2, :right]].join " "
 	# }
 	render_state = ->() {
-		# pos = $player[Component::Position].next
-		# vel = $player[Component::Velocity].next
+		puts "-"*100
+		pos = $player[Component::Position].next
+		vel = $player[Component::Velocity].next
+		puts "y          = #{pos.y.ai}"
+		puts "y distance = #{vel.y_distance.ai}"
 		# puts " " + [
 		# 	render_axis_state[pos[0], vel[0]],
 		# 	render_axis_state[pos[1], vel[1]]
 		# ].join(" | ")
 	}
 	render_state[]
-	20.times do |i|
+	10.times do |i|
 		$game.tick
 		render_state[]
 	end

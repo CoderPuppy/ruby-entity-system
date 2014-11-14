@@ -1,8 +1,41 @@
 module EntitySystem
 	module Component
+		def initialize *args
+			data = self.class.fields.values
+			index = 0
+			args.each do |arg|
+				if arg.is_a? Hash
+					arg.each do |k, v|
+						data[self.class.members.index(k)] = v
+					end
+				else
+					data[index] = arg
+					index += 1
+				end
+			end
+			super *data
+		end
+
 		def self.new(*fields, &blk)
+			fields = Hash[*fields.flat_map do |field|
+				if field.is_a? Hash
+					field.flat_map { |k, v| [k, v] }
+				else
+					[field, nil]
+				end
+			end]
+
 			impl = proc do
-				define_method :id do
+				include Component
+
+				@fields = fields
+				def self.fields; @fields; end
+
+				def self.[] *args, &blk
+					new *args, &blk
+				end
+
+				def id
 					self.class.id
 				end
 
@@ -12,7 +45,7 @@ module EntitySystem
 
 				def self.singular; true; end
 
-				define_method :inspect do
+				def inspect
 					if self.length > 0
 						# "#<#{self.class.name.split("::").last} #{self.to_h.map { |k, v| v.inspect }.join " "}>"
 						"#<#{self.class.name.split("::").last} #{self.to_h.map { |k, v| "#{k}=#{v.inspect}" }.join " "}>"
@@ -22,25 +55,21 @@ module EntitySystem
 					end
 				end
 
-				instance_eval &blk if blk
+				module_eval &blk if blk
 			end
 
 			if fields.empty?
 				Class.new do
-					def self.[]
-						new
-					end
-
 					def length; 0; end
 					def members; []; end
 					def self.members; []; end
 					def [] i; nil; end
 
-					instance_eval &impl
+					module_eval &impl
 				end
 			else
-				Struct.new *fields do
-					instance_eval &impl
+				Struct.new *fields.keys do
+					module_eval &impl
 				end
 			end
 		end
@@ -51,7 +80,7 @@ module EntitySystem
 				attr_reader :cla, :cid
 				attr_reader :time
 
-				define_singleton_method :name do
+				def self.name
 					"#{cla.name}::Stored"
 				end
 

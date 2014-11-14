@@ -1,37 +1,27 @@
-EntitySystem::Component::Friction = EntitySystem::Component.new :x_amt, :y_amt
-class EntitySystem::Process::Friction < EntitySystem::Process
-	def before; [EntitySystem::Process::Velocity]; end
+module EntitySystem
+	Component::Friction = Component.new x_amt: 1, y_amt: 1
+	class Process::Friction < Process
+		def after; [Process::Velocity]; end
 
-	def handles? entity
-		entity[EntitySystem::Component::Velocity] && entity[EntitySystem::Component::Friction]
-	end
+		def handles? entity
+			entity[Component::Velocity] && entity[Component::Friction]
+		end
 
-	def tick
-		@entities.each do |entity|
-			vel = entity[EntitySystem::Component::Velocity].next
-			fri = entity[EntitySystem::Component::Friction].next
-
-			if vel.x > 0
-				vel.x -= fri.x_amt.to_f
-				if vel.x < 0
-					vel.x = 0
+		def tick
+			@entities.each do |entity|
+				vel = entity[Component::Velocity].next
+				fri = entity[Component::Friction].next
+				
+				if vel.x_distance != 0
+					speed = [vel.x_speed, vel.x_distance.abs].min * fri.x_amt
+					vel.x_distance -= speed if vel.x_distance > 0
+					vel.x_distance += speed if vel.x_distance < 0
 				end
-			elsif vel.x < 0
-				vel.x += fri.x_amt.to_f
-				if vel.x > 0
-					vel.x = 0
-				end
-			end
 
-			if vel.y > 0
-				vel.y -= fri.y_amt.to_f
-				if vel.y < 0
-					vel.y = 0
-				end
-			elsif vel.y < 0
-				vel.y += fri.y_amt.to_f
-				if vel.y > 0
-					vel.y = 0
+				if vel.y_distance != 0
+					speed = [vel.y_speed, vel.y_distance.abs].min * fri.y_amt
+					vel.y_distance -= speed if vel.y_distance > 0
+					vel.y_distance += speed if vel.y_distance < 0
 				end
 			end
 		end
