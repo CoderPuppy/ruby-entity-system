@@ -1,0 +1,3 @@
+[submodule "extern/ruby-kv"]
+	path = extern/ruby-kv
+	url = git://github.com/CoderPuppy/ruby-kv.git

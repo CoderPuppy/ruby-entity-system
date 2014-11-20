@@ -94,35 +94,32 @@ module EntitySystem
 						entity_b, box_b = *entry_b
 						box_b = box_b.offset entity_b[Component::Position].next
 
-						# ap [entity_a, entity_b]
+						begin
+							t_x = calc_time[:x, entity_a, entity_a[Component::BoundingBox].next, entity_b, entity_b[Component::BoundingBox].next]
+							stop_movement[:x, entity_a, t_x]
+							stop_movement[:x, entity_b, t_x]
+							
+							t_y = calc_time[:y, entity_a, entity_a[Component::BoundingBox].next, entity_b, entity_b[Component::BoundingBox].next]
+							stop_movement[:y, entity_a, t_y]
+							stop_movement[:y, entity_b, t_y]
 
-							begin
-								t_x = calc_time[:x, entity_a, entity_a[Component::BoundingBox].next, entity_b, entity_b[Component::BoundingBox].next]
-								stop_movement[:x, entity_a, t_x]
-								stop_movement[:x, entity_b, t_x]
-								
-								t_y = calc_time[:y, entity_a, entity_a[Component::BoundingBox].next, entity_b, entity_b[Component::BoundingBox].next]
-								stop_movement[:y, entity_a, t_y]
-								stop_movement[:y, entity_b, t_y]
-
-								if (t_x > 0 && t_x <= 1) || (t_y > 0 && t_y <= 1)
-									# ap({
-									# 	a: entity_a,
-									# 	b: entity_b,
-									# 	t_x: t_x,
-									# 	t_y: t_y
-									# })
-								end
-							end
+							# if (t_x > 0 && t_x <= 1) || (t_y > 0 && t_y <= 1)
+							# 	ap({
+							# 		a: entity_a,
+							# 		b: entity_b,
+							# 		t_x: t_x,
+							# 		t_y: t_y
+							# 	})
+							# end
+						end
+						
 						if box_a.intersects? box_b
-
 							# entity_a[Component::Position].next = entity_a[Component::Position].prev
 							# entity_b[Component::Position].next = entity_b[Component::Position].prev
 							# puts "PhysicsCollision - #{entity_a.id.ai} and #{entity_b.id.ai} intersect"
 						end
 					end
 				end
-				# coll = entity[Component::Collision].next
 			end
 		end
 	end
