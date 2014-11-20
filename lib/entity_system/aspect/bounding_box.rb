@@ -10,11 +10,11 @@ module EntitySystem
 
 		def intersects? ix, iy = nil
 			if iy == nil
-				ix.x1 <= x2 && ix.x2 >= x1 &&
-				ix.y1 <= y2 && ix.y2 >= y1
+				ix.x1 < x2 && ix.x2 > x1 &&
+				ix.y1 < y2 && ix.y2 > y1
 			else
-				ix >= x1 && ix <= x2 &&
-				iy >= y1 && iy <= y2
+				ix > x1 && ix < x2 &&
+				iy > y1 && iy < y2
 			end
 		end
 
@@ -77,17 +77,29 @@ module EntitySystem
 					next_bound_y = ((curr_y[].abs.to_f/SECTION_SIZE).ceil * SECTION_SIZE).to_i - tmp_offset_y - base_offset
 					far_bound_y = y + height
 					
-					x = ((curr_x[].abs - (curr_x[].abs % SECTION_SIZE)) / SECTION_SIZE).to_i
-					if curr_x[] < 0
-						x *= -1
-						x -= 1
-					end
+					x = ((curr_x[].abs - (curr_x[].abs % SECTION_SIZE)) / SECTION_SIZE).to_i - tmp_offset_x/SECTION_SIZE
+					# if curr_x[] < 0
+					# 	x *= -1
+					# 	x -= 1
+					# end
 
-					y = ((curr_y[].abs - (curr_y[].abs % SECTION_SIZE)) / SECTION_SIZE).to_i
-					if curr_y[] < 0
-						y *= -1
-						y -= 1
-					end
+					y = ((curr_y[].abs - (curr_y[].abs % SECTION_SIZE)) / SECTION_SIZE).to_i - tmp_offset_y/SECTION_SIZE
+					# if curr_y[] < 0
+					# 	y *= -1
+					# 	y -= 1
+					# end
+
+					# ap({
+					# 	alignment: alignment,
+					# 	real_x: self.x,
+					# 	curr_x: curr_x[],
+					# 	x: x,
+					# 	tmp_offset_x: tmp_offset_x,
+					# 	real_y: self.y,
+					# 	curr_y: curr_y[],
+					# 	y: y,
+					# 	tmp_offset_y: tmp_offset_y
+					# })
 
 					key = "#{alignment}#{x},#{y}"
 					sections << key

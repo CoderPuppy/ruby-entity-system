@@ -71,16 +71,13 @@ module EntitySystem
 	::AwesomePrint::Formatter.send :include, AwesomePrint
 end
 
+require File.expand_path("../store.rb", __FILE__)
+
 require File.expand_path("../entity_system/game.rb", __FILE__)
 require File.expand_path("../entity_system/entity.rb", __FILE__)
 require File.expand_path("../entity_system/process.rb", __FILE__)
 require File.expand_path("../entity_system/component.rb", __FILE__)
-require File.expand_path("../entity_system/store.rb", __FILE__)
 require File.expand_path("../entity_system/game_store.rb", __FILE__)
-
-# Stores
-require File.expand_path("../entity_system/store/memory.rb", __FILE__)
-require File.expand_path("../entity_system/store/cached.rb", __FILE__)
 
 # Aspects
 require File.expand_path("../entity_system/aspect/identity.rb", __FILE__)
