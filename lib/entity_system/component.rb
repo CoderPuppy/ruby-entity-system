@@ -6,7 +6,9 @@ module EntitySystem
 			args.each do |arg|
 				if arg.is_a? Hash
 					arg.each do |k, v|
-						data[self.class.members.index(k)] = v
+						index = self.class.members.index(k)
+						raise ArgumentError, "#{k} is an invalid key" if index == nil
+						data[index] = v
 					end
 				else
 					data[index] = arg
@@ -30,6 +32,7 @@ module EntitySystem
 
 				@fields = fields
 				def self.fields; @fields; end
+				def fields; self.class.fields; end
 
 				def self.[] *args, &blk
 					new *args, &blk
@@ -37,6 +40,16 @@ module EntitySystem
 
 				def id
 					self.class.id
+				end
+
+				def values
+					fields.keys.map do |k|
+						self[k]
+					end
+				end
+
+				def == other
+					values == other.values
 				end
 
 				def self.id
@@ -63,25 +76,48 @@ module EntitySystem
 					def length; 0; end
 					def members; []; end
 					def self.members; []; end
-					def [] i; nil; end
+					def [] k; nil; end
+					def []= k; nil; end
 
 					module_eval &impl
 				end
 			else
 				Struct.new *fields.keys do
+					def [] k
+						if k.is_a? Fixnum
+							super
+						else
+							idx = @fields.keys.index(k)
+							raise ArgumentError, "Invalid key: #{k}" if idx == nil
+							super idx
+						end
+					end
+
+					def []= k, v
+						if k.is_a? Fixnum
+							super
+						else
+							idx = @fields.keys.index(k)
+							raise ArgumentError, "Invalid key: #{k}" if idx == nil
+							super idx, v
+						end
+					end
+
 					module_eval &impl
 				end
 			end
 		end
 
 		def self.synthesize game, cla, cid, time
-			Class.new cla do
+			synth_cla = Class.new cla do
+				@cla = cla
+
 				attr_reader :game
 				attr_reader :cla, :cid
 				attr_reader :time
 
 				def self.name
-					"#{cla.name}::Stored"
+					"#{@cla.name}::Stored"
 				end
 
 				def initialize game, cla, cid, time
@@ -136,7 +172,9 @@ module EntitySystem
 				def length
 					@cla.members.length
 				end
-			end.new game, cla, cid, time
+			end
+			# `debugger`
+			synth_cla.new game, cla, cid, time
 		end
 	end
 end

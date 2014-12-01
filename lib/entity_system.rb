@@ -1,5 +1,5 @@
 require "set"
-require "awesome_print"
+# require "awesome_print"
 require "json"
 
 module EntitySystem
@@ -41,34 +41,36 @@ module EntitySystem
 		alias :h= :height=
 	end
 
-	module AwesomePrint
-		def self.included mod
-			mod.send :alias_method, :cast_without_entity_system, :cast
-			mod.send :alias_method, :cast, :cast_with_entity_system
-		end
-
-		def cast_with_entity_system object, type
-			cast = cast_without_entity_system object, type
-			if object.is_a? Component
-				cast = :entity_system_component
+	if Kernel.const_defined? :AwesomePrint
+		module AwesomePrint
+			def self.included mod
+				mod.send :alias_method, :cast_without_entity_system, :cast
+				mod.send :alias_method, :cast, :cast_with_entity_system
 			end
-			cast
-		end
 
-		def awesome_entity_system_component object
-			name = colorize object.class.name.split("::").last, :class
-			data = object.to_h.map { |k, v| [k, @inspector.awesome(v)] }
-			kv = ->(kv) { "#{kv.first}=#{kv.last}" }
-			kv_spaced = ->(kv) { "#{kv.first} = #{kv.last}" }
-			if object.length == 0
-				name
-			else
-				# "#{name}(#{data.map(&kv).join(", ")})"
-				"#<#{name} #{data.map(&kv).join(" ")}>"
+			def cast_with_entity_system object, type
+				cast = cast_without_entity_system object, type
+				if object.is_a? Component
+					cast = :entity_system_component
+				end
+				cast
+			end
+
+			def awesome_entity_system_component object
+				name = colorize object.class.name.split("::").last, :class
+				data = object.to_h.map { |k, v| [k, @inspector.awesome(v)] }
+				kv = ->(kv) { "#{kv.first}=#{kv.last}" }
+				kv_spaced = ->(kv) { "#{kv.first} = #{kv.last}" }
+				if object.length == 0
+					name
+				else
+					# "#{name}(#{data.map(&kv).join(", ")})"
+					"#<#{name} #{data.map(&kv).join(" ")}>"
+				end
 			end
 		end
+		::AwesomePrint::Formatter.send :include, AwesomePrint
 	end
-	::AwesomePrint::Formatter.send :include, AwesomePrint
 end
 
 require File.expand_path("../store.rb", __FILE__)
@@ -84,6 +86,7 @@ require File.expand_path("../entity_system/aspect/identity.rb", __FILE__)
 require File.expand_path("../entity_system/aspect/debug_name.rb", __FILE__)
 require File.expand_path("../entity_system/aspect/area.rb", __FILE__)
 require File.expand_path("../entity_system/aspect/position.rb", __FILE__)
+require File.expand_path("../entity_system/aspect/facing.rb", __FILE__)
 require File.expand_path("../entity_system/aspect/bounding_box.rb", __FILE__)
 require File.expand_path("../entity_system/aspect/collision.rb", __FILE__)
 require File.expand_path("../entity_system/aspect/physics/collision.rb", __FILE__)

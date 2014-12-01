@@ -33,11 +33,7 @@ module EntitySystem
 			@id = id
 		end
 
-		def partial_tick(partial)
-			@components.each do |k, container|
-				container.partial_tick partial
-			end
-		end
+		def hash; @id.hash; end
 
 		def << component
 			cid = @game.store.add_component @id, component
@@ -73,5 +69,6 @@ module EntitySystem
 		def inspect
 			"#<Entity:#{@id}>"
 		end
+		alias_method :to_s, :inspect
 	end
 end

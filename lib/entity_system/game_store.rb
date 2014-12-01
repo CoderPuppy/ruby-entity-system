@@ -100,10 +100,12 @@ module EntitySystem
 
 		def self.serialize v
 			case v
-			when Fixnum
-				type = "int"
-			when Float
-				type = "float"
+			# when Fixnum
+			# 	type = "int"
+			# when Float
+			# 	type = "float"
+			when Numeric
+				type = "num"
 			when String
 				type = "str"
 			when Symbol
@@ -114,6 +116,9 @@ module EntitySystem
 			when Set
 				type = "set"
 				v = JSON.generate(v.map(&method(:serialize)))
+			when Boolean
+				type = "bool"
+				v = v ? "1" : "0"
 			else
 				raise "Can't find type for #{v.inspect}"
 			end
@@ -128,7 +133,7 @@ module EntitySystem
 			case type
 			when "int"
 				val = Integer(val)
-			when "float"
+			when "float", "num"
 				val = Float(val)
 			when "str"
 			when "sym"
@@ -138,6 +143,13 @@ module EntitySystem
 				val = nil
 			when "set"
 				val = Set.new JSON.parse(val).map(&method(:unserialize))
+			when "bool"
+				val = case val
+				when "1"
+					true
+				when "0"
+					false
+				end
 			else
 				raise "Unknown type: #{type}"
 			end
@@ -150,6 +162,7 @@ module EntitySystem
 	# entity:<eid>:<component_type>:<id> = cid
 
 	# component:max
-	# component:next:<cid>
-	# component:next:<cid>:<var> = value
+	# component:next><cid>
+	# component:next><cid>:<var> = value
+	# component:next<<val>:<cid>:<var> = <cid>:<var>
 end

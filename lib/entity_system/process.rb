@@ -31,7 +31,7 @@ class EntitySystem::Process
 	end
 
 	def add entity
-		if !@entities.include? entity
+		unless @entities.include? entity
 			@entities << entity
 			handle_add entity
 		end

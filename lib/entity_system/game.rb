@@ -27,7 +27,8 @@ module EntitySystem
 				@process_afters[before.id].first << process.id
 				@process_afters[before.id].last.last << process.id
 			end
-			@store.entities.each do |id, entity|
+			@store.entities.each do |k, id|
+				entity = Entity.new self, id.to_i
 				process.add entity if process.handles? entity
 			end
 			process

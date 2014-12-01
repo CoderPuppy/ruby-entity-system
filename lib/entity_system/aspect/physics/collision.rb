@@ -4,7 +4,7 @@ module EntitySystem
 		def after;[ Component::Velocity ];end
 
 		def handles? entity
-			entity[Component::PhysicsCollision]
+			entity[Component::PhysicsCollision] && entity[Component::Position] && entity[Component::Area] && entity[Component::BoundingBox]
 		end
 
 		def tick
@@ -28,6 +28,7 @@ module EntitySystem
 				]
 
 				(box.sections(:A) + box.sections(:B)).each do |key|
+					key = [entity[Component::Area].next.area, key]
 					sections[key] ||= Set.new
 					sections[key] << [entity, box]
 				end
