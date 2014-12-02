@@ -89,7 +89,7 @@ module EntitySystem
 						if k.is_a? Fixnum
 							super
 						else
-							idx = @fields.keys.index(k)
+							idx = fields.keys.index(k)
 							raise ArgumentError, "Invalid key: #{k}" if idx == nil
 							super idx
 						end
@@ -99,7 +99,7 @@ module EntitySystem
 						if k.is_a? Fixnum
 							super
 						else
-							idx = @fields.keys.index(k)
+							idx = fields.keys.index(k)
 							raise ArgumentError, "Invalid key: #{k}" if idx == nil
 							super idx, v
 						end
