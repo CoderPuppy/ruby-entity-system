@@ -10,15 +10,17 @@ module EntitySystem
 				prev_pos = entity[Component::Position].prev
 				next_pos = entity[Component::Position].next
 
-				entity[Component::Facing].next.dir = case true
-				when next_pos.y > prev_pos.y
-					:up
-				when next_pos.x > prev_pos.x
-					:right
-				when next_pos.x < prev_pos.x
-					:left
-				when next_pos.y < prev_pos.y
-					:down
+				if next_pos != prev_pos
+					entity[Component::Facing].next.dir = case true
+					when next_pos.y > prev_pos.y
+						:up
+					when next_pos.y < prev_pos.y
+						:down
+					when next_pos.x > prev_pos.x
+						:right
+					when next_pos.x < prev_pos.x
+						:left
+					end
 				end
 			end
 		end
