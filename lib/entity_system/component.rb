@@ -27,6 +27,8 @@ module EntitySystem
 				end
 			end]
 
+			fields[:id] = "main"
+
 			impl = proc do
 				include Component
 

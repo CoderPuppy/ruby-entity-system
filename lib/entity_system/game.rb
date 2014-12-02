@@ -8,6 +8,7 @@ module EntitySystem
 			@processes = Set.new
 			@ticking_processes = []
 			@process_afters = {}
+			@entities = {}
 		end
 
 		def init
@@ -15,7 +16,11 @@ module EntitySystem
 		end
 
 		def spawn
-			Entity.new self, @store.spawn
+			entity @store.spawn
+		end
+
+		def entity id
+			@entities[id] ||= Entity.new(self, id)
 		end
 
 		def add cla, *args, &blk
@@ -27,9 +32,9 @@ module EntitySystem
 				@process_afters[before.id].first << process.id
 				@process_afters[before.id].last.last << process.id
 			end
-			@store.entities.each do |k, id|
-				entity = Entity.new self, id.to_i
-				process.add entity if process.handles? entity
+			@store.entities.each do |id|
+				e = entity(id)
+				process.add e if process.handles? e
 			end
 			process
 		end

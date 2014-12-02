@@ -1,1 +1,3 @@
-EntitySystem::Component::Tracked = EntitySystem::Component.new
+module EntitySystem
+	Component::Tracked = Component.new
+end

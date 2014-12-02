@@ -1,1 +1,3 @@
-EntitySystem::Component::Identity = EntitySystem::Component.new :id
+module EntitySystem
+	Component::Identity = Component.new :id
+end

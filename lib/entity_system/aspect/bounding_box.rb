@@ -1,5 +1,7 @@
 module EntitySystem
 	Component::BoundingBox = Component.new :x, :y, :width, :height do
+		def self.singular; false; end
+
 		SECTION_SIZE = 30
 
 		def x1; x          ;end

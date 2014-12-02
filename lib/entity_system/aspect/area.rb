@@ -1,1 +1,3 @@
-EntitySystem::Component::Area = EntitySystem::Component.new :area
+module EntitySystem
+	Component::Area = Component.new :area
+end

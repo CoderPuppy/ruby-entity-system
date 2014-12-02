@@ -43,7 +43,7 @@ module ESTest
 
 	$platform << Component::PhysicsCollision[]
 
-	# ap Hash[*store.range(gte: "component:next:0", lte: "component:next:9").find_all do |k, v|
+	# ap Hash[*store.range(gte: "component:next:0", lte: "component:next:9").select do |k, v|
 	# 	k.match /^component:next:\d+:/
 	# end.flat_map do |k, v|
 	# 	[k.gsub(/^component:next:/, ""), v]

@@ -1,1 +1,3 @@
-EntitySystem::Component::DebugName = EntitySystem::Component.new :name
+module EntitySystem
+	Component::DebugName = Component.new :name
+end

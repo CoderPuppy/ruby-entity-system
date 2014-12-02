@@ -15,8 +15,8 @@ module StoreTest
 	# store.load gt: "for:", lt: "for:\177"
 	# store.load
 	p store["for:foo"]
-	p store[gt: "for:", lt: "for:\177"].find_all{true}
-	p store[gt: "rev:", lt: "rev:\177"].find_all{true}
-	p store[gt: "", lt: "\177"].find_all{true}
+	p store[gt: "for:", lt: "for:\177"].select{true}
+	p store[gt: "rev:", lt: "rev:\177"].select{true}
+	p store[gt: "", lt: "\177"].select{true}
 	store.close
 end

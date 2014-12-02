@@ -3,20 +3,15 @@ module EntitySystem
 		attr_reader :game
 		attr_reader :eid
 		attr_reader :cla, :cid
+		attr_reader :next, :prev
 
 		def initialize(game, eid, cla, cid)
 			@game = game
 			@eid = eid
 			@cla = cla
 			@cid = cid
-		end
-
-		def prev
-			Component.synthesize(@game, @cla, @cid, :prev)
-		end
-
-		def next
-			Component.synthesize(@game, @cla, @cid, :next)
+			@next = Component.synthesize @game, @cla, @cid, :next
+			@prev = Component.synthesize @game, @cla, @cid, :prev
 		end
 
 		def next= nxt
@@ -31,12 +26,15 @@ module EntitySystem
 		def initialize game, id
 			@game = game
 			@id = id
+			@components = {}
+
+			raise ArgumentError, "Bad ID: #{id}" unless @game.store.entity? id
 		end
 
 		def hash; @id.hash; end
 
 		def << component
-			cid = @game.store.add_component @id, component
+			cid = @game.store.add_component @id, component[:id], component
 			@game.processes.each do |process|
 				process.add self if process.handles? self
 			end
@@ -50,18 +48,23 @@ module EntitySystem
 		end
 
 		def [] cla, id = nil
-			if cla.singular
-				id ||= "main"
-			end
+			id ||= "main" if cla.singular
+
 			if id == nil
 				@game.store.components(@id).map do |id|
-					cid = @game.store.component @id, cla.id, id
-					ComponentContainer.new(@game, @id, cla, id, cid)
+					self[cla, id]
 				end
 			else
-				cid = @game.store.component @id, cla.id, id
-				if cid
-					ComponentContainer.new(@game, @id, cla, cid)
+				comp = @components[[cla, id]]
+				# log @id, cla.name, id, comp
+				if comp
+					comp
+				else
+					cid = @game.store.component @id, cla.id, id
+					# raise ArgumentError, "Bad ID: #{id} for #{self}[#{cla}]" unless cid
+					# log @id, cla.name, id, cid
+					return nil unless cid
+					@components[[cla, id]] = ComponentContainer.new(@game, @id, cla, cid)
 				end
 			end
 		end
