@@ -47,13 +47,15 @@ module EntitySystem
 			end
 		end
 
-		def [] cla, id = nil
-			id ||= "main" if cla.singular
+		def list cla
+			@game.store.components(@id, cla.id).map do |comp|
+				self[cla, comp.first]
+			end
+		end
 
+		def [] cla, id = "main"
 			if id == nil
-				@game.store.components(@id).map do |id|
-					self[cla, id]
-				end
+				list cla
 			else
 				comp = @components[[cla, id]]
 				# log @id, cla.name, id, comp

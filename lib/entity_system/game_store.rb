@@ -40,7 +40,7 @@ module EntitySystem
 		end
 
 		def tick
-			@store.apply Hash[*(@store.range(gte: "component:next\x00", lte: "component:next\xFF").flat_map do |k, v|
+			@store.apply Hash[*(@store.range(gte: "component:next\x00", lte: "component:next~").flat_map do |k, v|
 				["component:prev#{k[14..-1]}", v]
 			end)]
 		end
@@ -63,13 +63,13 @@ module EntitySystem
 
 		def components eid, type = nil
 			if type == nil
-				@store.range(gte: "entity:#{eid}:", lte: "entity:#{eid}:\177").map do |k, v|
+				@store.range(gte: "entity:#{eid}:", lte: "entity:#{eid}:\xFF").map do |k, v|
 					type, id = *k.split(":")[2..3]
-					[type, id.to_i]
+					[type, id.to_i, v.to_i]
 				end
 			else
-				@store.range(gte: "entity:#{eid}:#{type}:0", lte: "entity:#{eid}:#{type}:9").map do |k, v|
-					k.split(":")[3]
+				@store.range(gte: "entity:#{eid}:#{type}:", lte: "entity:#{eid}:#{type}:\xFF").map do |k, v|
+					[k.split(":")[3], v.to_i]
 				end
 			end
 		end
@@ -83,7 +83,7 @@ module EntitySystem
 			val = GameStore.serialize val
 			prefix = "component:next<#{type}:-#{key}:#{val}"
 			@store
-				.range(gte: "#{prefix}:", lte: "#{prefix}:\xFF")
+				.range(gte: "#{prefix}:", lte: "#{prefix}:~")
 				.map { |kv| @store["component:#{time}:#{kv.last}"].split("-").map(&:to_i) }
 		end
 
