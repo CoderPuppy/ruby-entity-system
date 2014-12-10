@@ -90,12 +90,6 @@ module EntitySystem
 		def add_component eid, id, component
 			cid = max_cid
 			self.max_cid += 1
-			# if component.class.singular
-			# 	id = "main"
-			# else
-			# 	id = max_comp_id eid, component.class.id
-			# 	self.set_max_comp_id(eid, component.class.id, id + 1)
-			# end
 			@store["component:next:#{cid}"] = "#{eid}-#{cid}"
 			update_component cid, component, :next
 			update_component cid, component, :prev

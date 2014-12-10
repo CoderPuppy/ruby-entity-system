@@ -58,8 +58,6 @@ module EntitySystem
 					@id ||= name.split("::").last.gsub(/([a-z])([A-Z])/) { |m| "#{m[0]}_#{m[1].downcase}" }.downcase.to_sym
 				end
 
-				def self.singular; true; end
-
 				def inspect
 					if self.length > 0
 						# "#<#{self.class.name.split("::").last} #{self.to_h.map { |k, v| v.inspect }.join " "}>"
@@ -69,6 +67,7 @@ module EntitySystem
 						"#{self.class.name.split("::").last}"
 					end
 				end
+				alias_method :to_s, :inspect
 
 				module_eval &blk if blk
 			end

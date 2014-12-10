@@ -38,10 +38,10 @@ module ESTest
 	# Physics
 	$platform << Component::Area[:home]
 	$platform << Component::Position[0, -1]
-	$platform << Component::BoundingBox[-50, 0, 100, 1]
 	$platform << Component::Collision[]
-
+	
 	$platform << Component::PhysicsCollision[]
+	$platform << Component::BoundingBox[-50, 0, 100, 1]
 
 	# ap Hash[*store.range(gte: "component:next:0", lte: "component:next:9").select do |k, v|
 	# 	k.match /^component:next:\d+:/

@@ -1,7 +1,7 @@
 module EntitySystem
 	Component::Friction = Component.new x_amt: 1, y_amt: 1
 	class Process::Friction < Process
-		def after; [Process::Velocity]; end
+		def after;[ Process::Velocity ];end
 
 		def handles? entity
 			entity[Component::Velocity] && entity[Component::Friction]

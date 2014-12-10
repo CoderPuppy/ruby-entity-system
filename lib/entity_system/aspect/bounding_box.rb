@@ -1,8 +1,9 @@
 module EntitySystem
 	Component::BoundingBox = Component.new :x, :y, :width, :height do
-		def self.singular; false; end
-
 		SECTION_SIZE = 30
+
+		def inspect; "#<BoundingBox #{x} #{y} #{width} #{height}>"; end
+		alias_method :to_s, :inspect
 
 		def x1; x          ;end
 		def x2; x + width  ;end
@@ -17,6 +18,15 @@ module EntitySystem
 			else
 				ix > x1 && ix < x2 &&
 				iy > y1 && iy < y2
+			end
+		end
+		def intersects_big? ix, iy = nil
+			if iy == nil
+				ix.x1 <= x2 && ix.x2 >= x1 &&
+				ix.y1 <= y2 && ix.y2 >= y1
+			else
+				ix >= x1 && ix <= x2 &&
+				iy >= y1 && iy <= y2
 			end
 		end
 
@@ -91,7 +101,7 @@ module EntitySystem
 					# 	y -= 1
 					# end
 
-					# ap({
+					# log({
 					# 	alignment: alignment,
 					# 	real_x: self.x,
 					# 	curr_x: curr_x[],

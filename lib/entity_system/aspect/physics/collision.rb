@@ -1,10 +1,13 @@
 module EntitySystem
-	Component::PhysicsCollision = Component.new
+	Component::PhysicsCollision = Component.new box_id: :main
 	class Process::PhysicsCollision < Process
 		def after;[ Component::Velocity ];end
 
 		def handles? entity
-			entity[Component::PhysicsCollision] && entity[Component::Position] && entity[Component::Area] && entity[Component::BoundingBox]
+			return false unless entity[Component::Position] && entity[Component::Area]
+			# log entity.to_s, entity.list(Component::PhysicsCollision)
+			# log entity.list(Component::PhysicsCollision).map { |c| entity[Component::BoundingBox, c.next.box_id] }
+			entity.list(Component::PhysicsCollision).any? { |c| entity[Component::BoundingBox, c.next.box_id] }
 		end
 
 		def tick
@@ -13,111 +16,132 @@ module EntitySystem
 				prev_pos = entity[Component::Position].prev
 				next_pos = entity[Component::Position].next
 
-				prev_box = entity[Component::BoundingBox].prev
-				next_box = entity[Component::BoundingBox].next
+				entity.list(Component::PhysicsCollision).each do |coll|
+					coll = coll.next
+					prev_box = entity[Component::BoundingBox, coll.box_id].prev
+					next_box = entity[Component::BoundingBox, coll.box_id].next
 
-				prev_offset_box = prev_box.offset prev_pos
-				next_offset_box = next_box.offset next_pos
+					prev_offset_box = prev_box.offset prev_pos
+					next_offset_box = next_box.offset next_pos
 
-				x = [prev_offset_box.x1, next_offset_box.x1].min
-				y = [prev_offset_box.y1, next_offset_box.y1].min
-				box = Component::BoundingBox[
-					x, y,
-					[prev_offset_box.x2, next_offset_box.x2].max - x,
-					[prev_offset_box.y2, next_offset_box.y2].max - y
-				]
+					x = [prev_offset_box.x1, next_offset_box.x1].min
+					y = [prev_offset_box.y1, next_offset_box.y1].min
+					box = Component::BoundingBox[
+						x, y,
+						[prev_offset_box.x2, next_offset_box.x2].max - x,
+						[prev_offset_box.y2, next_offset_box.y2].max - y
+					]
 
-				(box.sections(:A) + box.sections(:B)).each do |key|
-					key = [entity[Component::Area].next.area, key]
-					sections[key] ||= Set.new
-					sections[key] << [entity, box]
+					# log entity.id
+					box.sections(:A).each do |key|
+						# log entity.id, key
+						key = [entity[Component::Area].next.area, key]
+						sections[key] ||= Set.new
+
+						# if entity.id == 0
+						# 	log next_pos.inspect
+						# 	log next_box.inspect
+						# 	log next_offset_box.inspect
+						# end
+						sections[key] << [entity, coll.box_id, prev_offset_box, box]
+					end
 				end
 			end
+			# log sections
 
-			# ap sections
-
-			calc_speed = ->(axis, e) {
+			def calc_speed axis, e
 				e[Component::Position].next.public_send(axis) - e[Component::Position].prev.public_send(axis)
-			}
+			end
 
-			calc_time = ->(axis, e_a, b_a, e_b, b_b) {
-				b_a, b_b = b_a.offset(e_a[Component::Position].prev), b_b.offset(e_b[Component::Position].prev)
-				s_a = calc_speed[axis, e_a]
-				s_b = calc_speed[axis, e_b]
-				# if b_b.public_send("#{axis}2") < b_a.public_send("#{axis}1")
-				if b_a.public_send("#{axis}2") >= b_b.public_send("#{axis}1") && b_b.public_send("#{axis}2") < b_a.public_send("#{axis}1")
-					# puts "swap"
-					# ap({
-					# 	axis: axis,
-					# 	b_a: b_a.public_send(axis),
-					# 	w_a: b_a.public_send("#{axis}2") - b_a.public_send(axis),
-					# 	"b_a + w_a" => b_a.public_send("#{axis}2"),
-					# 	b_b: b_b.public_send(axis)
-					# })
+			def calc_time axis, e_a, b_a, e_b, b_b
+				s_a = calc_speed axis, e_a
+				s_b = calc_speed axis, e_b
+				if b_a.public_send("#{axis}2") > b_b.public_send("#{axis}1") && b_b.public_send("#{axis}2") <= b_a.public_send("#{axis}1")
+					# log :swap, e_a.id, e_b.id
+					# log b_a.to_s, b_b.to_s
 					e_a, e_b = e_b, e_a
 					b_a, b_b = b_b, b_a
 					s_a, s_b = s_b, s_a
 				end
-				ds = s_a - s_b
+				ds = s_b - s_a
+				return Float::INFINITY if ds >= 0
 				dist = b_a.public_send("#{axis}2") - b_b.public_send("#{axis}1")
-				return Float::INFINITY if ds == 0
-				t = -dist / ds
-				# ap({
-				# 	e_a: e_a,
-				# 	e_b: e_b,
-				# 	axis: axis,
-				# 	s_a: s_a,
-				# 	s_b: s_b,
-				# 	dist: dist,
-				# 	ds: ds,
-				# 	b_a: b_a.public_send(axis),
-				# 	b_b: b_b.public_send(axis),
-				# 	w_a: b_a.public_send("#{axis}2") - b_a.public_send(axis),
-				# 	w_b: b_b.public_send("#{axis}2") - b_b.public_send(axis),
-				# 	b2_a: b_a.public_send("#{axis}2"),
-				# 	b2_b: b_b.public_send("#{axis}2")
-				# })
-				t
-			}
+				log({
+					axis: axis,
+					dist: dist,
+					ds: ds,
+					e_a: e_a.id,
+					e_b: e_b.id,
+					b_a: {
+						x1: b_a.x1,
+						x2: b_a.x2,
+						y1: b_a.y1,
+						y2: b_a.y2,
+						width: b_a.width,
+						height: b_a.height
+					},
+					b_b: {
+						x1: b_b.x1,
+						x2: b_b.x2,
+						y1: b_b.y1,
+						y2: b_b.y2,
+						width: b_b.width,
+						height: b_b.height
+					},
+					s_a: s_a,
+					s_b: s_b
+				})
+				dist.to_f / ds.to_f
+			end
 
-			stop_movement = ->(axis, e, t) {
-				return if t > 1
-				e[Component::Position].next.public_send "#{axis}=", e[Component::Position].prev.public_send(axis) + calc_speed[axis, e]*t
-			}
+			def valid_time? t
+				t < 1 && t >= 0
+			end
 
+			def stop_movement axis, e, t
+				return if t == Float::INFINITY
+				log :t, t
+				# if e[Component::Velocity]
+				# 	log e[Component::Velocity].prev.to_s, e[Component::Velocity].next.to_s
+				# end
+				return unless valid_time? t
+				speed = calc_speed axis, e
+				pos = e[Component::Position]
+				log({
+					axis: axis,
+					t: t,
+					speed: speed,
+					move: speed*t,
+					next: pos.next.public_send(axis),
+					prev: pos.prev.public_send(axis),
+					new: pos.prev.public_send(axis) + speed*t
+				})
+				pos.next.public_send "#{axis}=", pos.prev.public_send(axis) + speed*t
+			end
+
+			handled = Set.new
 			sections.each do |key, section|
 				section.each do |entry_a|
-					entity_a, box_a = *entry_a
-					box_a = box_a.offset entity_a[Component::Position].next
+					entity_a, id_a, box_a, big_box_a = *entry_a
 
 					section.each do |entry_b|
 						next if entry_a == entry_b
-						entity_b, box_b = *entry_b
-						box_b = box_b.offset entity_b[Component::Position].next
+						entity_b, id_b, box_b, big_box_b = *entry_b
+						key = [[entity_a.id, id_a], [entity_b.id, id_b]].sort!
+						next if handled.include? key
+						handled << key
 
-						begin
-							t_x = calc_time[:x, entity_a, entity_a[Component::BoundingBox].next, entity_b, entity_b[Component::BoundingBox].next]
-							stop_movement[:x, entity_a, t_x]
-							stop_movement[:x, entity_b, t_x]
+						intersects = big_box_a.intersects_big? big_box_b
+						# log :intersects, entity_a.id, entity_b.id if intersects
+
+						if intersects
+							t_x = calc_time :x, entity_a, box_a, entity_b, box_b
+							stop_movement :x, entity_a, t_x
+							stop_movement :x, entity_b, t_x
 							
-							t_y = calc_time[:y, entity_a, entity_a[Component::BoundingBox].next, entity_b, entity_b[Component::BoundingBox].next]
-							stop_movement[:y, entity_a, t_y]
-							stop_movement[:y, entity_b, t_y]
-
-							# if (t_x > 0 && t_x <= 1) || (t_y > 0 && t_y <= 1)
-							# 	ap({
-							# 		a: entity_a,
-							# 		b: entity_b,
-							# 		t_x: t_x,
-							# 		t_y: t_y
-							# 	})
-							# end
-						end
-						
-						if box_a.intersects? box_b
-							# entity_a[Component::Position].next = entity_a[Component::Position].prev
-							# entity_b[Component::Position].next = entity_b[Component::Position].prev
-							# puts "PhysicsCollision - #{entity_a.id.ai} and #{entity_b.id.ai} intersect"
+							t_y = calc_time :y, entity_a, box_a, entity_b, box_b
+							stop_movement :y, entity_a, t_y
+							stop_movement :y, entity_b, t_y
 						end
 					end
 				end

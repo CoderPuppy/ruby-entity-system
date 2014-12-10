@@ -27,8 +27,11 @@ module EntitySystem
 			process = cla.new self, *args, &blk
 			@processes << process
 			@ticking_processes << process if process.respond_to? :tick
-			@process_afters[process.id] = [Set.new(process.after.map(&:id)), [Set.new(process.after.map(&:id))]]
+			afters = @process_afters[process.id] ||= [Set.new, [Set.new]]
+			afters.first.merge process.after.map(&:id)
+			afters.last.last.merge process.after.map(&:id)
 			process.before.each do |before|
+				@process_afters[before.id] ||= [Set.new, [Set.new]]
 				@process_afters[before.id].first << process.id
 				@process_afters[before.id].last.last << process.id
 			end
