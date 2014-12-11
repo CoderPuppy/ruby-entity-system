@@ -33,8 +33,9 @@ module EntitySystem
 					]
 
 					# log entity.id
-					box.sections(:A).each do |key|
+					# box.sections(:A).each do |key|
 						# log entity.id, key
+						key = :all
 						key = [entity[Component::Area].next.area, key]
 						sections[key] ||= Set.new
 
@@ -44,7 +45,7 @@ module EntitySystem
 						# 	log next_offset_box.inspect
 						# end
 						sections[key] << [entity, coll.box_id, prev_offset_box, box]
-					end
+					# end
 				end
 			end
 			# log sections
@@ -66,31 +67,31 @@ module EntitySystem
 				ds = s_b - s_a
 				return Float::INFINITY if ds >= 0
 				dist = b_a.public_send("#{axis}2") - b_b.public_send("#{axis}1")
-				log({
-					axis: axis,
-					dist: dist,
-					ds: ds,
-					e_a: e_a.id,
-					e_b: e_b.id,
-					b_a: {
-						x1: b_a.x1,
-						x2: b_a.x2,
-						y1: b_a.y1,
-						y2: b_a.y2,
-						width: b_a.width,
-						height: b_a.height
-					},
-					b_b: {
-						x1: b_b.x1,
-						x2: b_b.x2,
-						y1: b_b.y1,
-						y2: b_b.y2,
-						width: b_b.width,
-						height: b_b.height
-					},
-					s_a: s_a,
-					s_b: s_b
-				})
+				# log({
+				# 	axis: axis,
+				# 	dist: dist,
+				# 	ds: ds,
+				# 	e_a: e_a.id,
+				# 	e_b: e_b.id,
+				# 	b_a: {
+				# 		x1: b_a.x1,
+				# 		x2: b_a.x2,
+				# 		y1: b_a.y1,
+				# 		y2: b_a.y2,
+				# 		width: b_a.width,
+				# 		height: b_a.height
+				# 	},
+				# 	b_b: {
+				# 		x1: b_b.x1,
+				# 		x2: b_b.x2,
+				# 		y1: b_b.y1,
+				# 		y2: b_b.y2,
+				# 		width: b_b.width,
+				# 		height: b_b.height
+				# 	},
+				# 	s_a: s_a,
+				# 	s_b: s_b
+				# })
 				dist.to_f / ds.to_f
 			end
 
@@ -100,22 +101,22 @@ module EntitySystem
 
 			def stop_movement axis, e, t
 				return if t == Float::INFINITY
-				log :t, t
+				# log :t, t
 				# if e[Component::Velocity]
 				# 	log e[Component::Velocity].prev.to_s, e[Component::Velocity].next.to_s
 				# end
 				return unless valid_time? t
 				speed = calc_speed axis, e
 				pos = e[Component::Position]
-				log({
-					axis: axis,
-					t: t,
-					speed: speed,
-					move: speed*t,
-					next: pos.next.public_send(axis),
-					prev: pos.prev.public_send(axis),
-					new: pos.prev.public_send(axis) + speed*t
-				})
+				# log({
+				# 	axis: axis,
+				# 	t: t,
+				# 	speed: speed,
+				# 	move: speed*t,
+				# 	next: pos.next.public_send(axis),
+				# 	prev: pos.prev.public_send(axis),
+				# 	new: pos.prev.public_send(axis) + speed*t
+				# })
 				pos.next.public_send "#{axis}=", pos.prev.public_send(axis) + speed*t
 			end
 
@@ -131,7 +132,7 @@ module EntitySystem
 						next if handled.include? key
 						handled << key
 
-						intersects = big_box_a.intersects_big? big_box_b
+						intersects = big_box_a.intersects? big_box_b
 						# log :intersects, entity_a.id, entity_b.id if intersects
 
 						if intersects

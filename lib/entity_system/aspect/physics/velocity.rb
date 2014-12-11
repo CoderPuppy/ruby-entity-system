@@ -17,11 +17,11 @@ module EntitySystem
 
 				if vel.y_distance != 0
 					speed = [vel.y_speed, vel.y_distance.abs].min
-					log :y_move, {
-						prev: pos.y,
-						next: pos.y + speed * vel.y_distance/vel.y_distance.abs,
-						move: speed * vel.y_distance/vel.y_distance.abs
-					}
+					# log :y_move, {
+					# 	prev: pos.y,
+					# 	next: pos.y + speed * vel.y_distance/vel.y_distance.abs,
+					# 	move: speed * vel.y_distance/vel.y_distance.abs
+					# }
 					pos.y += speed * vel.y_distance/vel.y_distance.abs
 				end
 			end
