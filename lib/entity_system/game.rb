@@ -7,6 +7,8 @@ module EntitySystem
 			@store = GameStore.new store
 			@processes = Set.new
 			@ticking_processes = []
+			@disabled_processes = Set.new
+			@process_classes = {}
 			@process_afters = {}
 			@entities = {}
 		end
@@ -27,6 +29,10 @@ module EntitySystem
 			process = cla.new self, *args, &blk
 			@processes << process
 			@ticking_processes << process if process.respond_to? :tick
+			cla.ancestors.each do |cla|
+				@process_classes[cla] ||= Set.new
+				@process_classes[cla] << process
+			end
 			afters = @process_afters[process.id] ||= [Set.new, [Set.new]]
 			afters.first.merge process.after.map(&:id)
 			afters.last.last.merge process.after.map(&:id)
@@ -42,9 +48,48 @@ module EntitySystem
 			process
 		end
 
-		def remove process
-			@processes.delete process
-			@ticking_processes.delete process
+		def remove *processes
+			processes.map! do |process|
+				if process.is_a? Module
+					@process_classes[process]
+				else
+					process
+				end
+			end
+			processes.flatten!
+			processes = processes.to_set
+			@processes -= processes
+			@ticking_processes.delete_if {|proc| processes.include? proc}
+			self
+		end
+
+		def enable *processes
+			processes.map! do |process|
+				if process.is_a? Module
+					@process_classes[process]
+				else
+					process
+				end
+			end
+			processes.flatten!
+			@processes += processes
+			@ticking_processes += processes
+			sort
+			self
+		end
+
+		def disable *processes
+			processes.map! do |process|
+				if process.is_a? Module
+					@process_classes[process]
+				else
+					process
+				end
+			end
+			processes.flatten!
+			processes = processes.to_set
+			@processes -= processes
+			@ticking_processes.delete_if {|proc| processes.include? proc}
 			self
 		end
 
