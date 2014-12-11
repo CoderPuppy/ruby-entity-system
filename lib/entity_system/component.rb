@@ -109,21 +109,23 @@ module EntitySystem
 			end
 		end
 
-		def self.synthesize game, cla, cid, time
+		def self.synthesize game, cla, eid, cid, time
 			synth_cla = Class.new cla do
 				@cla = cla
 
 				attr_reader :game
 				attr_reader :cla, :cid
+				attr_reader :eid
 				attr_reader :time
 
 				def self.name
 					"#{@cla.name}::Stored"
 				end
 
-				def initialize game, cla, cid, time
+				def initialize game, cla, eid, cid, time
 					@game = game
 					@cla = cla
+					@eid = eid
 					@cid = cid
 					@time = time
 				end
@@ -175,7 +177,7 @@ module EntitySystem
 				end
 			end
 			# `debugger`
-			synth_cla.new game, cla, cid, time
+			synth_cla.new game, cla, eid, cid, time
 		end
 	end
 end

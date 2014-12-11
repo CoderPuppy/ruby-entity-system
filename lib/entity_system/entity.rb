@@ -10,8 +10,8 @@ module EntitySystem
 			@eid = eid
 			@cla = cla
 			@cid = cid
-			@next = Component.synthesize @game, @cla, @cid, :next
-			@prev = Component.synthesize @game, @cla, @cid, :prev
+			@next = Component.synthesize @game, @cla, @eid, @cid, :next
+			@prev = Component.synthesize @game, @cla, @eid, @cid, :prev
 		end
 
 		def next= nxt
