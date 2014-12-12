@@ -1,10 +1,11 @@
 module EntitySystem
 	class Process
-		attr_accessor :enabled
+		attr_accessor :paused
+		attr_reader :entities
 
 		def initialize game
 			@game = game
-			@enabled = true
+			@paused = true
 			@entities = Set.new
 		end
 
@@ -19,15 +20,14 @@ module EntitySystem
 		def after; []; end
 		def before; []; end
 
-		def enabled?; @enabled; end
-		def enable
-			@enabled = true
+		def paused?; @paused; end
+		def unpause
+			@paused = true
 			self
 		end
 
-		def disabled?; !@enabled; end
-		def disable
-			@enabled = false
+		def pause
+			@paused = false
 			self
 		end
 

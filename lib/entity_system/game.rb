@@ -48,30 +48,38 @@ module EntitySystem
 			process
 		end
 
-		def remove *processes
+		def find_processes *processes
 			processes.map! do |process|
 				if process.is_a? Module
-					@process_classes[process]
+					@process_classes[process].to_a
 				else
 					process
 				end
 			end
 			processes.flatten!
-			processes = processes.to_set
+			processes
+		end
+
+		def remove *processes
+			processes = find_processes(*processes).to_set
+			processes.each do |process|
+				process.entities.each do |entity|
+					process.remove entity
+				end
+			end
 			@processes -= processes
 			@ticking_processes.delete_if {|proc| processes.include? proc}
 			self
 		end
 
 		def enable *processes
-			processes.map! do |process|
-				if process.is_a? Module
-					@process_classes[process]
-				else
-					process
+			processes = find_processes(*processes)
+			processes.each do |process|
+				@store.entities.each do |id|
+					e = entity(id)
+					process.add e if process.handles? e
 				end
 			end
-			processes.flatten!
 			@processes += processes
 			@ticking_processes += processes
 			sort
@@ -79,15 +87,10 @@ module EntitySystem
 		end
 
 		def disable *processes
-			processes.map! do |process|
-				if process.is_a? Module
-					@process_classes[process]
-				else
-					process
-				end
+			processes = find_processes(*processes).to_set
+			processes.each do |process|
+				process.remove process.entities.first until process.entities.empty?
 			end
-			processes.flatten!
-			processes = processes.to_set
 			@processes -= processes
 			@ticking_processes.delete_if {|proc| processes.include? proc}
 			self
@@ -136,7 +139,7 @@ module EntitySystem
 		def tick
 			@store.tick
 			@ticking_processes.each do |process|
-				process.tick if process.enabled?
+				process.tick
 			end
 		end
 	end
