@@ -1,16 +1,19 @@
 module EntitySystem
-	Component::Collision = Component.new :touching_top, :touching_bottom, :touching_left, :touching_right, :intersecting do
-		define_method :initialize do
-			super Set.new, Set.new, Set.new, Set.new, Set.new
-		end
-	end
+	Component::Collision = Component.new({
+		box_ids: Set.new,
+		intersecting: Set.new,
+		touching_top: Set.new,
+		touching_left: Set.new,
+		touching_right: Set.new,
+		touching_bottom: Set.new
+	})
 	class Process::Collision < Process
 		SECTION_SIZE = 30
 
-		def after; [Process::Velocity]; end
+		def after; [Process::PhysicsCollision]; end
 
 		def handles? entity
-			entity[Component::Collision] && entity[Component::Position] && entity[Component::BoundingBox]
+			entity.list(Component::Collision).any? && entity[Component::Position] && entity[Component::BoundingBox]
 		end
 
 		def tick
