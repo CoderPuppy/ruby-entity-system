@@ -93,13 +93,14 @@ module EntitySystem
 			prefix = "component<#{type}:-#{key}:#{val}"
 			from_time(time)
 				.range(gte: "#{prefix}:", lte: "#{prefix}:~")
-				.map { |kv| @next_store["component:#{kv.last}"].split("-").map(&:to_i) }
+				.map { |kv| @main_store["component:#{kv.last}"].split("-") }
+				.map { |comp| comp[0...-1].map(&:to_i) + [comp.last] }
 		end
 
 		def add_component eid, id, component
 			cid = max_cid
 			self.max_cid += 1
-			@main_store["component:#{cid}"] = "#{eid}-#{cid}"
+			@main_store["component:#{cid}"] = [eid, cid, id].join "-"
 			update_component cid, component, :next
 			update_component cid, component, :prev
 			@main_store["entity:#{eid}:#{component.class.id}:#{id}"] = cid
