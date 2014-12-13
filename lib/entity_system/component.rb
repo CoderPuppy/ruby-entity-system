@@ -132,11 +132,11 @@ module EntitySystem
 
 				cla.members.each do |k|
 					define_method k do
-						@game.store.component_data(@cid, @time, k)
+						@game.store.component_data @cid, @time, k
 					end
 
 					define_method "#{k}=" do |v|
-						game.store.set_component_data(@cid, @time, k, v)
+						game.store.set_component_data @cid, @time, k, v
 						v
 					end
 				end
