@@ -26,7 +26,27 @@ module EntitySystem
 		end
 
 		def query query
+			def intersection h
+				h.values.reduce { |acc, ele| acc.to_set & ele }
+			end
 
+			components = Hash[*query.flat_map do |type, data|
+				type = type.id if type.respond_to? :id
+
+				props = Hash[*data.flat_map{|k, v|
+					# find all the components that has the value `v` for the key `k`
+					[k, @store.query(type, k, v)]
+				}]
+
+				intersection = intersection(props)
+				# this is what components verify the constraint
+
+				# after this we need to find the entity
+				# the component doesn't matter
+				[type, intersection.map{|p|p.first}]
+			end]
+
+			intersection(components).map { |id| entity id }
 		end
 
 		def [] query
