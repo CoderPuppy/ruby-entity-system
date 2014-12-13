@@ -9,24 +9,34 @@ module EntitySystem
 	# component:<time><<type>:<key>:<val>:<cid> = <cid>
 
 	class GameStore
-		def initialize store
-			@store = store
+		def initialize
+			@main_store = yield :main
+			@next_store = yield :next
+			tick
+		end
+
+		def stores
+			{
+				main: @main_store,
+				next: @next_store,
+				prev: @prev_store
+			}
 		end
 
 		def max_eid
-			@store["entity:max"].to_i
+			@main_store["entity:max"].to_i
 		end
 
 		def max_eid= eid
-			@store["entity:max"] = eid.to_s
+			@main_store["entity:max"] = eid.to_s
 		end
 
 		def entity? eid
-			!!@store["entity:#{eid}"]
+			!!@main_store["entity:#{eid}"]
 		end
 
 		def entities
-			@store
+			@main_store
 				.range(gte: "entity:0", lte: "entity:9")
 				.select { |kv| kv.first.match(/^entity:\d+$/) }
 				.map { |kv| kv.last.to_i }
@@ -35,71 +45,71 @@ module EntitySystem
 		def spawn
 			eid = max_eid
 			self.max_eid += 1
-			@store["entity:#{eid}"] = eid
+			@main_store["entity:#{eid}"] = eid
 			eid
 		end
 
 		def tick
-			@store.apply Hash[*(@store.range(gte: "component:next\x00", lte: "component:next~").flat_map do |k, v|
-				["component:prev#{k[14..-1]}", v]
-			end)]
+			@prev_store = @next_store.dup
+			@next_store["tick"] = @next_store["tick"].to_i + 1
 		end
 
 		def max_cid
-			@store["component:max"].to_i
+			@main_store["component:max"].to_i
 		end
 
 		def max_cid= cid
-			@store["component:max"] = cid.to_s
+			@main_store["component:max"] = cid.to_s
 		end
 
 		def max_comp_id eid, ctype
-			@store["entity:#{eid}:#{ctype}:max"].to_i
+			@main_store["entity:#{eid}:#{ctype}:max"].to_i
 		end
 
 		def set_max_comp_id eid, ctype, id
-			@store["entity:#{eid}:#{ctype}:max"] = id
+			@main_store["entity:#{eid}:#{ctype}:max"] = id
 		end
 
 		def components eid, type = nil
 			if type == nil
-				@store.range(gte: "entity:#{eid}:", lte: "entity:#{eid}:\xFF").map do |k, v|
+				@main_store.range(gte: "entity:#{eid}:", lte: "entity:#{eid}:\xFF").map do |k, v|
 					type, id = *k.split(":")[2..3]
 					[type, id.to_i, v.to_i]
 				end
 			else
-				@store.range(gte: "entity:#{eid}:#{type}:", lte: "entity:#{eid}:#{type}:\xFF").map do |k, v|
+				@main_store.range(gte: "entity:#{eid}:#{type}:", lte: "entity:#{eid}:#{type}:\xFF").map do |k, v|
 					[k.split(":")[3], v.to_i]
 				end
 			end
 		end
 
 		def component eid, ctype, id
-			comp = @store["entity:#{eid}:#{ctype}:#{id}"]
+			comp = @main_store["entity:#{eid}:#{ctype}:#{id}"]
 			comp.to_i if comp
 		end
 
 		def query type, key, val, time = :next
 			val = GameStore.serialize val
-			prefix = "component:next<#{type}:-#{key}:#{val}"
-			@store
+			prefix = "component<#{type}:-#{key}:#{val}"
+			from_time(time)
 				.range(gte: "#{prefix}:", lte: "#{prefix}:~")
-				.map { |kv| @store["component:#{time}:#{kv.last}"].split("-").map(&:to_i) }
+				.map { |kv| @next_store["component:#{kv.last}"].split("-").map(&:to_i) }
 		end
 
 		def add_component eid, id, component
 			cid = max_cid
 			self.max_cid += 1
-			@store["component:next:#{cid}"] = "#{eid}-#{cid}"
+			@main_store["component:#{cid}"] = "#{eid}-#{cid}"
 			update_component cid, component, :next
 			update_component cid, component, :prev
-			@store["entity:#{eid}:#{component.class.id}:#{id}"] = cid
+			@main_store["entity:#{eid}:#{component.class.id}:#{id}"] = cid
 			cid
 		end
 
 		def update_component cid, component, time = :next
-			@store["component:#{time}>#{cid}:type"] = component.class.id
-			@store["component:#{time}<#{component.class.id}:type:#{component.class.id}:#{cid}"] = "#{cid}:type"
+			store = from_time(time)
+			store["component>#{cid}:type"] = component.class.id
+			store["component<#{component.class.id}:type:#{component.class.id}:#{cid}"] = "#{cid}:type"
 			component.members.each_with_index do |k, i|
 				set_component_data cid, time, k, component[i]
 			end
@@ -107,18 +117,22 @@ module EntitySystem
 		end
 
 		def component_type cid, time
-			@store["component:#{time}>#{cid}:type"]
+			from_time(time)["component>#{cid}:type"]
 		end
 
 		def component_data cid, time, key
-			GameStore.unserialize(@store["component:#{time}>#{cid}:-#{key}"])
+			GameStore.unserialize(from_time(time)["component>#{cid}:-#{key}"])
 		end
 
 		def set_component_data cid, time, key, val
 			val = GameStore.serialize(val)
 			type = component_type cid, time
-			@store["component:#{time}>#{cid}:-#{key}"] = val
-			@store["component:#{time}<#{type}:-#{key}:#{val}:#{cid}"] = cid
+			prev = @prev_store["component>#{cid}:-#{key}"]
+			prev = nil if prev == val
+			store = from_time(time)
+			store["component>#{cid}:-#{key}"] = val
+			store["component<#{type}:-#{key}:#{val}:#{cid}"] = cid
+			# log "BAD" if @prev_store["component>#{cid}:-#{key}"] != prev
 		end
 
 		def self.serialize v
@@ -183,5 +197,17 @@ module EntitySystem
 			end
 			val
 		end
+
+		private
+			def from_time time
+				case time
+				when :next
+					@next_store
+				when :prev
+					@prev_store
+				else
+					raise ArgumentError, "Bad time: #{time}"
+				end
+			end
 	end
 end

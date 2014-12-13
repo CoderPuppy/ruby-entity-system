@@ -3,8 +3,8 @@ module EntitySystem
 		attr_reader :store
 		attr_reader :processes, :ticking_processes
 
-		def initialize(store)
-			@store = GameStore.new store
+		def initialize &blk
+			@store = GameStore.new &blk
 			@processes = Set.new
 			@ticking_processes = []
 			@disabled_processes = Set.new
@@ -23,6 +23,18 @@ module EntitySystem
 
 		def entity id
 			@entities[id] ||= Entity.new(self, id)
+		end
+
+		def query query
+
+		end
+
+		def [] query
+			if query.is_a? Fixnum
+				entity query
+			else
+				self.query query
+			end
 		end
 
 		def add cla, *args, &blk
