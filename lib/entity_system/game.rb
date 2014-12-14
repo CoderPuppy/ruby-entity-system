@@ -21,6 +21,14 @@ module EntitySystem
 			entity @store.spawn
 		end
 
+		def [] query
+			if query.is_a? Fixnum
+				entity query
+			else
+				self.query query
+			end
+		end
+
 		def entity id
 			@entities[id] ||= Entity.new(self, id)
 		end
@@ -30,30 +38,142 @@ module EntitySystem
 				h.values.reduce { |acc, ele| acc.to_set & ele }
 			end
 
-			components = Hash[*query.flat_map do |type, data|
+			entities = Hash[*query.flat_map do |type, data|
 				type = type.id if type.respond_to? :id
 
-				props = Hash[*data.flat_map{|k, v|
-					# find all the components that has the value `v` for the key `k`
-					[k, @store.query(type, k, v)]
-				}]
+				[type, if data.empty?
+					@store.by_type type
+				else
+					props = Hash[*data.flat_map{|k, v|
+						# find all the components that has the value `v` for the key `k`
+						[k, @store.query(type, k, v)]
+					}]
 
-				intersection = intersection(props)
-				# this is what components verify the constraint
-
-				# after this we need to find the entity
-				# the component doesn't matter
-				[type, intersection.map{|p|p.first}]
+					# this is what components verify the constraint
+					# after this we need to find the entity
+					# the component doesn't matter
+					intersection props
+				end.map{|p|p.first}]
 			end]
 
-			intersection(components).map { |id| entity id }
+			intersection(entities).map { |id| entity id }
 		end
 
-		def [] query
-			if query.is_a? Fixnum
-				entity query
-			else
-				self.query query
+		def query_unloaded query
+			Enumerator.new do |out, done|
+				to_load = query.length
+				loaded = 0
+				entities = []
+				query
+					.map do |type, data|
+						type = type.id if type.respond_to? :id
+
+						if data.empty?
+							@store.by_type_unloaded type
+						else
+							Enumerator.new do |out, done|
+								props = []
+								to_load_i = data.length
+								loaded_i = 0
+								data.each do |k, v|
+									# find all the components that has the value `v` for the key `k`
+									res = []
+									@store.query_unloaded(type, k, v).each do |kv|
+										res << kv
+									end.onend do
+										if props.empty?
+											props = res.to_set
+										else
+											props &= res
+										end
+										loaded_i += 1
+										if loaded_i >= to_load_i
+											props.each do |v|
+												out << v
+											end
+											done[]
+										end
+									end
+								end
+							end.lazy
+						end.map{|p|p.first}
+					end
+					.each do |e|
+						res = []
+						e.each do |v|
+							res << v
+						end.onend do
+							if entities.empty?
+								entities = res.to_set
+							else
+								entities &= res
+							end
+							loaded += 1
+							if loaded >= to_load
+								entities.each do |id|
+									out << id
+								end
+								done[]
+							end
+						end
+					end
+			end.lazy
+		end
+
+		def load *ids, &blk
+			to_load = ids.length
+			loaded = 0
+			ids.each_with_index do |id, i|
+				res = []
+				if id.respond_to? :each
+					id
+				else
+					[id]
+				end.each do |v|
+					res << v
+				end.onend do
+					ids[i] = res
+					loaded += 1
+					if loaded >= to_load
+						ids.flatten!
+						@store.load *ids do
+							reassign
+							blk.call if blk
+						end
+					end
+				end
+			end
+			self
+		end
+
+		def unload *ids
+			ids = ids.map do |id|
+				if id.respond_to? :id
+					id.id
+				else
+					id
+				end
+			end
+			ids.each do |id|
+				entity = entity id
+				@processes.each do |process|
+					process.remove entity
+				end
+				@entities.delete id
+			end
+			@store.unload *ids
+			self
+		end
+
+		def reassign *processes
+			processes = @processes.to_a if processes.empty?
+			processes = find_processes *processes
+			@store.entities.each do |id|
+				e = entity(id)
+				processes.each do |process|
+					next unless @processes.include? process
+					process.add e if process.handles? e
+				end
 			end
 		end
 
@@ -73,10 +193,7 @@ module EntitySystem
 				@process_afters[before.id].first << process.id
 				@process_afters[before.id].last.last << process.id
 			end
-			@store.entities.each do |id|
-				e = entity(id)
-				process.add e if process.handles? e
-			end
+			reassign process
 			process
 		end
 
@@ -106,12 +223,7 @@ module EntitySystem
 
 		def enable *processes
 			processes = find_processes(*processes)
-			processes.each do |process|
-				@store.entities.each do |id|
-					e = entity(id)
-					process.add e if process.handles? e
-				end
-			end
+			reassign *processes
 			@processes += processes
 			@ticking_processes += processes
 			sort
@@ -166,6 +278,15 @@ module EntitySystem
 					0
 				end
 			end
+		end
+
+		def save
+			@store.save
+			self
+		end
+
+		def tick_count
+			@store.tick_count
 		end
 
 		def tick

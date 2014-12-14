@@ -1,17 +1,23 @@
 module EntitySystem
+	## Main Store
 	# entity:max
 	# entity:<eid>
 	# entity:<eid>:<component_type>:<id> = cid
 
 	# component:max
-	# component:<time>><cid>
-	# component:<time>><cid>:<key> = value
-	# component:<time><<type>:<key>:<val>:<cid> = <cid>
+	# component><cid> = <eid>-<id>-<cid>
+	# component<<type>:<cid> = <cid>
+
+	# Timed Store
+	# component><cid>:<key> = value
+	# component<<type>:<key>:<val>:<cid> = <cid>
 
 	class GameStore
+		attr_reader :main_store, :next_store, :prev_store
+
 		def initialize
-			@main_store = yield :main
-			@next_store = yield :next
+			@main_store = Store::Cached.new yield(:main, true), yield(:main, false)
+			@next_store = Store::Cached.new yield(:next, true), yield(:next, false)
 			tick
 		end
 
@@ -49,9 +55,73 @@ module EntitySystem
 			eid
 		end
 
+		def load *ids, &blk
+			to_load = 0
+			loaded = 0
+			onloaded = ->(name) do
+				to_load += 1
+				iloaded = false
+				-> do
+					next if iloaded
+					iloaded = true
+					loaded += 1
+					if loaded >= to_load && blk
+						blk[]
+					end
+				end
+			end
+			ids.onend(&onloaded["ids"]).each do |eid|
+				t = onloaded[eid]
+				@main_store.load(gte: "entity:#{eid}", lte: "entity:#{eid}\xFF") do
+					tt = onloaded["#{eid} components"]
+					components(eid).each do |comp|
+						ttt = onloaded[comp.join(":") + " data"]
+						@main_store.load gte: "component>#{comp.last}", lte: "component>#{comp.last}", &onloaded[comp.join(":")]
+						@next_store.load(gte: "component>#{comp.last}", lte: "component>#{comp.last}\xFF") do
+							@next_store.range(gte: "component>#{comp.last}", lte: "component>#{comp.last}\xFF").each do |kv|
+								cid, key = *kv.first.split(">")[1..-1].join(">").split(":")
+								@next_store.load gte: "component<#{key}:#{kv.last}:#{cid}", lte: "component<#{key}:#{kv.last}:#{cid}", &onloaded[comp.join(":") + " data #{key}"]
+							end
+							ttt[]
+						end
+					end.onend &tt
+					t[]
+				end
+			end
+		end
+
+		def unload *ids
+			save
+			main_batch = @main_store.batch
+			next_batch = @next_store.batch
+			ids.each do |eid|
+				components(eid).each do |comp|
+					main_batch.delete "component>#{comp.last}"
+					@next_store.range(gte: "component>#{comp.last}", lte: "component>#{comp.last}\xFF").each do |kv|
+						next_batch.delete kv.first
+						cid, key = *kv.first.split(">")[1..-1].join(">").split(":")
+						next_batch.delete "component<#{key}:#{kv.last}:#{cid}"
+					end
+				end
+				main_batch.delete gte: "entity:#{eid}", lte: "entity:#{eid}\xFF"
+			end
+			main_batch.apply
+			next_batch.apply
+			self
+		end
+
+		def save
+			@main_store.save
+			@next_store.save
+		end
+
 		def tick
-			@prev_store = @next_store.dup
-			@next_store["tick"] = @next_store["tick"].to_i + 1
+			@prev_store = @next_store.cache.dup
+			@next_store["tick"] = tick_count + 1
+		end
+
+		def tick_count
+			@next_store["tick"].to_i
 		end
 
 		def max_cid
@@ -89,21 +159,52 @@ module EntitySystem
 		end
 
 		def query type, key, val, time = :next
+			type = type.id if type.respond_to? :id
 			val = GameStore.serialize val
 			prefix = "component<#{type}:-#{key}:#{val}"
 			from_time(time)
-				.range(gte: "#{prefix}:", lte: "#{prefix}:~")
-				.map { |kv| @main_store["component:#{kv.last}"].split("-") }
+				.range(gte: "#{prefix}:", lte: "#{prefix}:\xFF")
+				.map { |kv| @main_store["component>#{kv.last}"].split("-") }
+				.map { |comp| comp[0...-1].map(&:to_i) + [comp.last] }
+		end
+
+		def by_type type
+			type = type.id if type.respond_to? :id
+			prefix = "component<#{type}"
+			@main_store
+				.range(gte: "#{prefix}:", lte: "#{prefix}:\xFF")
+				.map { |kv| @main_store["component>#{kv.last}"].split("-") }
+				.map { |comp| comp[0...-1].map(&:to_i) + [comp.last] }
+		end
+
+		def query_unloaded type, key, val
+			type = type.id if type.respond_to? :id
+			val = GameStore.serialize val
+			prefix = "component<#{type}:-#{key}:#{val}"
+			@next_store.db
+				.range(gte: "#{prefix}:", lte: "#{prefix}:\xFF")
+				.flat_map { |kv| @main_store.db.range(gte: "component>#{kv.last}", lte: "component>#{kv.last}").map{|kv|kv.last.split("-")} }
+				.map { |comp| comp[0...-1].map(&:to_i) + [comp.last] }
+		end
+
+		def by_type_unloaded type
+			type = type.id if type.respond_to? :id
+			prefix = "component<#{type}"
+			@main_store.db
+				.range(gte: "#{prefix}:", lte: "#{prefix}:\xFF")
+				.flat_map { |kv| @main_store.db.range(gte: "component>#{kv.last}", lte: "component>#{kv.last}").map{|kv|kv.last.split("-")} }
 				.map { |comp| comp[0...-1].map(&:to_i) + [comp.last] }
 		end
 
 		def add_component eid, id, component
 			cid = max_cid
 			self.max_cid += 1
-			@main_store["component:#{cid}"] = [eid, cid, id].join "-"
+			type = component.class.id
+			@main_store["component>#{cid}"] = [eid, cid, id].join "-"
+			@main_store["component<#{type}:#{cid}"] = cid
 			update_component cid, component, :next
 			update_component cid, component, :prev
-			@main_store["entity:#{eid}:#{component.class.id}:#{id}"] = cid
+			@main_store["entity:#{eid}:#{type}:#{id}"] = cid
 			cid
 		end
 
@@ -133,7 +234,6 @@ module EntitySystem
 			store = from_time(time)
 			store["component>#{cid}:-#{key}"] = val
 			store["component<#{type}:-#{key}:#{val}:#{cid}"] = cid
-			# log "BAD" if @prev_store["component>#{cid}:-#{key}"] != prev
 		end
 
 		def self.serialize v
