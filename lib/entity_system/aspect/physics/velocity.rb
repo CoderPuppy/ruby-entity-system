@@ -6,7 +6,7 @@ module EntitySystem
 		end
 
 		def tick
-			@entities.each do |entity|
+			@entities.each do |eid, entity|
 				pos = entity[Component::Position].next
 				vel = entity[Component::Velocity].next
 

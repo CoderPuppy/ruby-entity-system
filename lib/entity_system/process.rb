@@ -6,7 +6,7 @@ module EntitySystem
 		def initialize game
 			@game = game
 			@paused = true
-			@entities = Set.new
+			@entities = {}
 		end
 
 		def id
@@ -32,17 +32,18 @@ module EntitySystem
 		end
 
 		def add entity
-			unless @entities.include? entity
-				@entities << entity
+			unless @entities.include? entity.id
+				@entities[entity.id] = entity
 				handle_add entity
 			end
 			entity
 		end
 
 		def remove entity
-			if @entities.include? entity
-				@entities.delete entity
-				handle_remove entity
+			if @entities.include? entity.id
+				e = @entities[entity.id]
+				@entities.delete entity.id
+				handle_remove e
 			end
 			entity
 		end

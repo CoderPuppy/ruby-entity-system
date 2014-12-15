@@ -18,7 +18,7 @@ module EntitySystem
 
 		def tick
 			sections = {}
-			@entities.each do |entity|
+			@entities.each do |eid, entity|
 				pos = entity[Component::Position].next
 				box = entity[Component::BoundingBox].next
 				offset_box = box.offset pos

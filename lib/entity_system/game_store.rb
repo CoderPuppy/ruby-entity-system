@@ -58,13 +58,17 @@ module EntitySystem
 		def load *ids, &blk
 			to_load = 0
 			loaded = 0
+			waiting = Set.new
 			onloaded = ->(name) do
 				to_load += 1
 				iloaded = false
+				waiting << name
 				-> do
 					next if iloaded
 					iloaded = true
 					loaded += 1
+					waiting.delete name
+					# log waiting.to_a.join(", ")
 					if loaded >= to_load && blk
 						blk[]
 					end
@@ -77,10 +81,12 @@ module EntitySystem
 					components(eid).each do |comp|
 						ttt = onloaded[comp.join(":") + " data"]
 						@main_store.load gte: "component>#{comp.last}", lte: "component>#{comp.last}", &onloaded[comp.join(":")]
-						@next_store.load(gte: "component>#{comp.last}", lte: "component>#{comp.last}\xFF") do
-							@next_store.range(gte: "component>#{comp.last}", lte: "component>#{comp.last}\xFF").each do |kv|
+						@next_store.load(gte: "component>#{comp.last}:", lte: "component>#{comp.last}:\xFF") do
+							@next_store.range(gte: "component>#{comp.last}:", lte: "component>#{comp.last}:\xFF").each do |kv|
 								cid, key = *kv.first.split(">")[1..-1].join(">").split(":")
-								@next_store.load gte: "component<#{key}:#{kv.last}:#{cid}", lte: "component<#{key}:#{kv.last}:#{cid}", &onloaded[comp.join(":") + " data #{key}"]
+								@next_store.load gte: "component<#{comp.first}:#{key}:#{kv.last}:#{cid}", lte: "component<#{comp.first}:#{key}:#{kv.last}:#{cid}", &onloaded[comp.join(":") + " data #{key}"]
+								# log "component<#{comp.first}:#{key}:#{kv.last}:#{cid}"
+								# @next_store["component<#{comp.first}:#{key}:#{kv.last}:#{cid}"] = cid
 							end
 							ttt[]
 						end
@@ -92,21 +98,18 @@ module EntitySystem
 
 		def unload *ids
 			save
-			main_batch = @main_store.batch
-			next_batch = @next_store.batch
 			ids.each do |eid|
 				components(eid).each do |comp|
-					main_batch.delete "component>#{comp.last}"
-					@next_store.range(gte: "component>#{comp.last}", lte: "component>#{comp.last}\xFF").each do |kv|
-						next_batch.delete kv.first
+					@main_store.unload gte: "component>#{comp.last}", lte: "component>#{comp.last}"
+					@next_store.range(gte: "component>#{comp.last}:", lte: "component>#{comp.last}:\xFF").each do |kv|
+						@next_store.unload gte: kv.first, lte: kv.first
 						cid, key = *kv.first.split(">")[1..-1].join(">").split(":")
-						next_batch.delete "component<#{key}:#{kv.last}:#{cid}"
+						# log :unloading, "component<#{comp.first}:#{key}:#{kv.last}:#{cid}"
+						@next_store.unload gte: "component<#{comp.first}:#{key}:#{kv.last}:#{cid}", lte: "component<#{comp.first}:#{key}:#{kv.last}:#{cid}"
 					end
 				end
-				main_batch.delete gte: "entity:#{eid}", lte: "entity:#{eid}\xFF"
+				@main_store.unload gte: "entity:#{eid}", lte: "entity:#{eid}\xFF"
 			end
-			main_batch.apply
-			next_batch.apply
 			self
 		end
 
@@ -211,7 +214,7 @@ module EntitySystem
 		def update_component cid, component, time = :next
 			store = from_time(time)
 			store["component>#{cid}:type"] = component.class.id
-			store["component<#{component.class.id}:type:#{component.class.id}:#{cid}"] = "#{cid}:type"
+			store["component<#{component.class.id}:type:#{component.class.id}:#{cid}"] = cid
 			component.members.each_with_index do |k, i|
 				set_component_data cid, time, k, component[i]
 			end
@@ -229,11 +232,15 @@ module EntitySystem
 		def set_component_data cid, time, key, val
 			val = GameStore.serialize(val)
 			type = component_type cid, time
-			prev = @prev_store["component>#{cid}:-#{key}"]
-			prev = nil if prev == val
 			store = from_time(time)
-			store["component>#{cid}:-#{key}"] = val
-			store["component<#{type}:-#{key}:#{val}:#{cid}"] = cid
+			batch = store.batch
+			if time == :next
+				prev = @prev_store["component>#{cid}:-#{key}"]
+				batch.delete "component<#{type}:-#{key}:#{prev}:#{cid}"
+			end
+			batch["component>#{cid}:-#{key}"] = val
+			batch["component<#{type}:-#{key}:#{val}:#{cid}"] = cid
+			batch.apply
 		end
 
 		def self.serialize v

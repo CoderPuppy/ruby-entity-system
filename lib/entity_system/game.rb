@@ -9,7 +9,6 @@ module EntitySystem
 			@ticking_processes = []
 			@disabled_processes = Set.new
 			@process_classes = {}
-			@process_afters = {}
 			@entities = {}
 		end
 
@@ -31,6 +30,10 @@ module EntitySystem
 
 		def entity id
 			@entities[id] ||= Entity.new(self, id)
+		end
+
+		def entities
+			@store.entities.lazy.map { |id| entity id }
 		end
 
 		def query query
@@ -136,7 +139,9 @@ module EntitySystem
 					loaded += 1
 					if loaded >= to_load
 						ids.flatten!
+						# log ids.join(", ")
 						@store.load *ids do
+							# log @store.entities.join(", ")
 							reassign
 							blk.call if blk
 						end
@@ -147,7 +152,7 @@ module EntitySystem
 		end
 
 		def unload *ids
-			ids = ids.map do |id|
+			ids = ids.flatten.map do |id|
 				if id.respond_to? :id
 					id.id
 				else
@@ -185,14 +190,7 @@ module EntitySystem
 				@process_classes[cla] ||= Set.new
 				@process_classes[cla] << process
 			end
-			afters = @process_afters[process.id] ||= [Set.new, [Set.new]]
-			afters.first.merge process.after.map(&:id)
-			afters.last.last.merge process.after.map(&:id)
-			process.before.each do |before|
-				@process_afters[before.id] ||= [Set.new, [Set.new]]
-				@process_afters[before.id].first << process.id
-				@process_afters[before.id].last.last << process.id
-			end
+			sort
 			reassign process
 			process
 		end
@@ -241,24 +239,31 @@ module EntitySystem
 		end
 
 		def sort
+			afters = {}
 			processes = Hash[@processes.map { |process| [process.id, process] }]
 			processes.each do |id, process|
+				t = Set.new(process.after.map(&:id).select{|id|processes.include? id})
+				afters[process.id] = [t, [t.dup]]
+			end
+			processes.each do |id, process|
 				process.before.each do |before|
-					@process_afters[before.id].first << id
-					@process_afters[before.id].last.last << id
+					next unless afters[before.id]
+					next unless processes.include? id
+					afters[before.id].first << id
+					afters[before.id].last.last << id
 				end
 			end
 			while true
 				any = false
-				@process_afters.each do |k, after|
+				afters.each do |k, after|
 					new_procs = Set.new
 					after.last.last.each do |id|
-						process = processes[id]
-						unless process.after.empty?
+						pafter = afters[id].first
+						unless pafter.empty?
 							any = true
-							new_procs.merge process.after
-							if process.after.include? k
-								raise "Cyclic Dependency between #{k} and #{process.id}"
+							new_procs.merge pafter
+							if pafter.include? k
+								raise "Cyclic Dependency between #{k} and #{id}"
 							end
 						end
 					end
@@ -268,14 +273,14 @@ module EntitySystem
 				break unless any
 			end
 			@ticking_processes.sort! do |a, b|
-				a_after = @process_afters[a.id].first
-				b_after = @process_afters[b.id].first
+				a_after = afters[a.id].first
+				b_after = afters[b.id].first
 				if a_after.include? b.id
 					1
 				elsif b_after.include? a.id
 					-1
 				else
-					0
+					1
 				end
 			end
 		end

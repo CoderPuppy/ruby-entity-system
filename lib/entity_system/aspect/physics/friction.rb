@@ -8,7 +8,7 @@ module EntitySystem
 		end
 
 		def tick
-			@entities.each do |entity|
+			@entities.each do |eid, entity|
 				vel = entity[Component::Velocity].next
 				fri = entity[Component::Friction].next
 				
