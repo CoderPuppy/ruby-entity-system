@@ -12,19 +12,19 @@ module EntitySystem
 			end
 		end
 
-		def handles? entity
-			entity[Component::Tracked]
+		def handles? entity, component
+			component.cla == Component::Tracked
 		end
 
 		def tick
-			# log :tracked, :tick, @entities
 			@tracked = begin
-				@entities
-					.values
-					.map { |e| [e, e[Component::Tracked].next.priority] }
+				@components[Component::Tracked]
+					.to_a
+					.map { |e| [e.first, e.last.next.priority] }
 					.sort { |a, b| a.last <=> b.last }
 					.map { |e| e.first }
 			end
+			# log :tracked, :tick, @tracked.map(&:id).join(" ")
 		end
 	end
 	class Process::TrackedLoadArea < Process
@@ -50,8 +50,11 @@ module EntitySystem
 					next if prev_area == next_area
 					@game.unload entity.id
 					@game.unload *@game.query(Component::Area => {area: prev_area})
+					# @game.query_unloaded(Component::Area => {area: next_area}).each do |id|
+						# log :loading, id
+					# end
 					@game.load @game.query_unloaded(Component::Area => {area: next_area})
-					@game.load entity.id
+					# @game.load entity.id
 				end
 		end
 	end
@@ -62,7 +65,7 @@ module EntitySystem
 			@tracked = tracked
 		end
 
-		def after;[ Process::Tracked ];end
+		def after;[ Process::Tracked, Process::Render ];end
 
 		def handles? entity
 			false

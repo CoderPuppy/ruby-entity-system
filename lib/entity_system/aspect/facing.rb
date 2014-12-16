@@ -1,6 +1,9 @@
 module EntitySystem
 	Component::Facing = Component.new dir: :down
 	class Process::Facing < Process
+		def after;[ Process::Velocity ];end
+		def before;[ Process::PhysicsCollision ];end
+
 		def handles? entity
 			entity[Component::Facing] && entity[Component::Position]
 		end

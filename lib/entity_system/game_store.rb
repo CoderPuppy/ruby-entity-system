@@ -66,6 +66,9 @@ module EntitySystem
 				-> do
 					next if iloaded
 					iloaded = true
+					if loaded >= to_load
+						# log :missing, name
+					end
 					loaded += 1
 					waiting.delete name
 					# log waiting.to_a.join(", ")
@@ -147,11 +150,12 @@ module EntitySystem
 			if type == nil
 				@main_store.range(gte: "entity:#{eid}:", lte: "entity:#{eid}:\xFF").map do |k, v|
 					type, id = *k.split(":")[2..3]
-					[type, id.to_i, v.to_i]
+					[type, id, v.to_i]
 				end
 			else
 				@main_store.range(gte: "entity:#{eid}:#{type}:", lte: "entity:#{eid}:#{type}:\xFF").map do |k, v|
-					[k.split(":")[3], v.to_i]
+					type, id = *k.split(":")[2..3]
+					[id, v.to_i]
 				end
 			end
 		end

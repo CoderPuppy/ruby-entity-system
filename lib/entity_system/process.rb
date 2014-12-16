@@ -7,6 +7,16 @@ module EntitySystem
 			@game = game
 			@paused = true
 			@entities = {}
+			@components_by_entity = Hash.new do |h, k|
+				h[k] = Set.new
+			end
+			@components = Hash.new do |h, k|
+				if Class === k
+					h[k] = Set.new
+				elsif Array === k && k.length == 2
+					h[k + [:main]]
+				end
+			end
 		end
 
 		def id
@@ -31,19 +41,77 @@ module EntitySystem
 			self
 		end
 
-		def add entity
-			unless @entities.include? entity.id
-				@entities[entity.id] = entity
-				handle_add entity
+		def add entity, component = nil
+			if component == nil
+				entity.list.each do |comp|
+					add entity, comp
+				end
+			else
+				entity = @entities[entity.id] || entity
+				component = @components[[entity, component.cla, component.id]] || component
+				# log :trying, :to, :add, entity.id, component.type, component.id, :to, self.id
+				return entity unless handles? entity, component
+				unless @components[[entity, component.cla, component.id]]
+					# log :adding, entity.id, component.type, component.id, :to, self.id
+					@entities[entity.id] = entity
+					@components_by_entity[entity.id] << [component.type, component.id]
+					# log id, entity.id, @components_by_entity[entity.id].to_a.map{|c|c.join ":"}.join(", ")
+					@components[component.cla] << [entity, component]
+					@components[[entity, component.cla, component.id]] = component
+					handle_add entity, component
+				end
 			end
 			entity
 		end
 
-		def remove entity
-			if @entities.include? entity.id
+		def remove raw_entity, raw_component = nil
+			if raw_component == nil
+				raw_entity.list.each do |comp|
+					remove raw_entity, comp
+				end
+			else
+				# log :trying, :to, :remove, raw_entity.id, raw_component.type, raw_component.id, :from, id
+				entity = @entities[raw_entity.id] #|| raw_entity
+				# log :no, :entity, raw_entity.id unless entity
+				return raw_entity unless entity
+				component = @components[[entity, raw_component.cla, raw_component.id]]
+				# unless component
+				# 	log :no, :component, raw_component.type, raw_component.id
+				# 	log @components.keys.select{|k|k.is_a?(Array) && k.length == 3}#.map{|k|[k[0].id, k[1].id, k[2]].join(":")}
+				# end
+				return raw_entity unless component
+				# log :removing, entity.id, component.type, component.id, :from, id
 				e = @entities[entity.id]
-				@entities.delete entity.id
-				handle_remove e
+				@components_by_entity[entity.id].delete [component.type, component.id]
+				if @components_by_entity[entity.id].empty?
+					# log :deleting, entity.id, :from, id
+					# log id, entity.id, @components_by_entity[entity.id].to_a.map{|c|"#{c.type}:#{c.id}"}.join(", ")
+					@entities.delete entity.id
+					@components_by_entity.delete entity.id
+				# else
+				# 	log @components_by_entity[entity.id].to_a.map{|e|e.join ":"}.join(", ")
+				end
+				@components.delete [entity, component.cla, component.id]
+				@components.delete_if do |cla, comps|
+					if comps.is_a? Set
+						comps.delete_if do |e|
+							ientity, icomponent = *e
+							if ientity.id == entity.id && icomponent.type == component.type && icomponent.id == component.id
+								# log :deleting, ientity.id, icomponent.type, icomponent.id, :from, id
+								true
+							else
+								false
+							end
+						end
+						comps.empty?
+					elsif cla.is_a?(Array) && cla == [entity, component.cla, component.id]
+						true
+					else
+						false
+					end
+				end
+				# log :handling, :remove, entity.id, component.type, component.id, :from, id
+				handle_remove entity, component
 			end
 			entity
 		end

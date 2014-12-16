@@ -3,55 +3,66 @@ module EntitySystem
 	class Process::PhysicsCollision < Process
 		def after;[ Component::Velocity ];end
 
-		def handles? entity
-			return false unless entity[Component::Position] && entity[Component::Area]
-			# log entity.to_s, entity.list(Component::PhysicsCollision)
-			# log entity.list(Component::PhysicsCollision).map { |c| entity[Component::BoundingBox, c.next.box_id] }
-			entity.list(Component::PhysicsCollision).any? { |c| entity[Component::BoundingBox, c.next.box_id] }
+		def handles? entity, component
+			case [component.type, true]
+			when [Component::Position.id, component.id == :main]
+				true
+			when [Component::Area.id, component.id == :main]
+				true
+			when [Component::PhysicsCollision.id, true]
+				true
+			when [Component::BoundingBox.id, true]
+				true
+			else
+				false
+			end
 		end
 
 		def tick
 			sections = {}
-			@entities.each do |eid, entity|
-				prev_pos = entity[Component::Position].prev
-				next_pos = entity[Component::Position].next
+			@components[Component::PhysicsCollision].each do |e|
+				entity, coll = *e
+				pos = @components[[entity, Component::Position]]
+				next unless pos
+				prev_pos = pos.prev
+				next_pos = pos.next
 
-				entity.list(Component::PhysicsCollision).each do |coll|
-					coll = coll.next
-					prev_box = entity[Component::BoundingBox, coll.box_id].prev
-					next_box = entity[Component::BoundingBox, coll.box_id].next
+				coll = coll.next
+				box = @components[[entity, Component::BoundingBox, coll.box_id]]
+				next unless box
+				prev_box = box.prev
+				next_box = box.next
 
-					prev_offset_box = prev_box.offset prev_pos
-					next_offset_box = next_box.offset next_pos
+				prev_offset_box = prev_box.offset prev_pos
+				next_offset_box = next_box.offset next_pos
 
-					x = [prev_offset_box.x1, next_offset_box.x1].min
-					y = [prev_offset_box.y1, next_offset_box.y1].min
-					box = Component::BoundingBox[
-						x, y,
-						[prev_offset_box.x2, next_offset_box.x2].max - x,
-						[prev_offset_box.y2, next_offset_box.y2].max - y
-					]
+				x = [prev_offset_box.x1, next_offset_box.x1].min
+				y = [prev_offset_box.y1, next_offset_box.y1].min
+				box = Component::BoundingBox[
+					x, y,
+					[prev_offset_box.x2, next_offset_box.x2].max - x,
+					[prev_offset_box.y2, next_offset_box.y2].max - y
+				]
 
-					# log entity.id
-					# box.sections(:A).each do |key|
-						# log entity.id, key
-						key = :all
-						key = [entity[Component::Area].next.area, key]
-						sections[key] ||= Set.new
+				# log entity.id
+				# box.sections(:A).each do |key|
+					# log entity.id, key
+					key = :all
+					key = [entity[Component::Area].next.area, key]
+					sections[key] ||= Set.new
 
-						# if entity.id == 0
-						# 	log next_pos.inspect
-						# 	log next_box.inspect
-						# 	log next_offset_box.inspect
-						# end
-						sections[key] << [entity, coll.box_id, prev_offset_box, box]
+					# if entity.id == 0
+					# 	log next_pos.inspect
+					# 	log next_box.inspect
+					# 	log next_offset_box.inspect
 					# end
-				end
+					sections[key] << [entity, coll.box_id, prev_offset_box, box]
+				# end
 			end
 			# log sections
 
 			def calc_speed axis, e
-				e[Component::Position].next.public_send(axis) - e[Component::Position].prev.public_send(axis)
+				@components[[e, Component::Position]].next.public_send(axis) - @components[[e, Component::Position]].prev.public_send(axis)
 			end
 
 			def calc_time axis, e_a, b_a, e_b, b_b
@@ -107,7 +118,7 @@ module EntitySystem
 				# end
 				return unless valid_time? t
 				speed = calc_speed axis, e
-				pos = e[Component::Position]
+				pos = @components[[e, Component::Position]]
 				# log({
 				# 	axis: axis,
 				# 	t: t,

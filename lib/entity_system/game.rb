@@ -177,7 +177,7 @@ module EntitySystem
 				e = entity(id)
 				processes.each do |process|
 					next unless @processes.include? process
-					process.add e if process.handles? e
+					process.add e
 				end
 			end
 		end
@@ -297,6 +297,7 @@ module EntitySystem
 		def tick
 			@store.tick
 			@ticking_processes.each do |process|
+				# log :ticking, process.id
 				process.tick
 			end
 		end

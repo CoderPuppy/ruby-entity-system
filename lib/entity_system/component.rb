@@ -17,6 +17,13 @@ module EntitySystem
 			end
 			super *data
 		end
+		
+		def self.name_from_id id
+			id.split("_").map{|part| part[0].upcase + part[1..-1]}.join("")
+		end
+		def self.from_id id
+			const_get name_from_id(id)
+		end
 
 		def self.new(*fields, &blk)
 			fields = Hash[*fields.flat_map do |field|
@@ -40,7 +47,7 @@ module EntitySystem
 					new *args, &blk
 				end
 
-				def id
+				def type
 					self.class.id
 				end
 
@@ -51,7 +58,11 @@ module EntitySystem
 				end
 
 				def == other
-					values == other.values
+					if other.is_a? Component
+						values == other.values
+					else
+						super
+					end
 				end
 
 				def self.id
@@ -79,11 +90,16 @@ module EntitySystem
 					def self.members; []; end
 					def [] k; nil; end
 					def []= k; nil; end
+					def to_h; {}; end
 
 					module_eval &impl
 				end
 			else
 				Struct.new *fields.keys do
+					def to_h
+						Hash[fields.keys.map{|k|[k, self[k]]}]
+					end
+
 					def [] k
 						if k.is_a? Fixnum
 							super
