@@ -22,13 +22,13 @@ module EntitySystem
 			sections = {}
 			@components[Component::PhysicsCollision].each do |e|
 				entity, coll = *e
-				pos = @components[[entity, Component::Position]]
+				pos = @components[[entity.id, Component::Position]]
 				next unless pos
 				prev_pos = pos.prev
 				next_pos = pos.next
 
 				coll = coll.next
-				box = @components[[entity, Component::BoundingBox, coll.box_id]]
+				box = @components[[entity.id, Component::BoundingBox, coll.box_id]]
 				next unless box
 				prev_box = box.prev
 				next_box = box.next
@@ -48,7 +48,7 @@ module EntitySystem
 				# box.sections(:A).each do |key|
 					# log entity.id, key
 					key = :all
-					key = [entity[Component::Area].next.area, key]
+					key = [@components[[entity.id, Component::Area]].next.area, key]
 					sections[key] ||= Set.new
 
 					# if entity.id == 0
@@ -62,7 +62,7 @@ module EntitySystem
 			# log sections
 
 			def calc_speed axis, e
-				@components[[e, Component::Position]].next.public_send(axis) - @components[[e, Component::Position]].prev.public_send(axis)
+				@components[[e.id, Component::Position]].next.public_send(axis) - @components[[e.id, Component::Position]].prev.public_send(axis)
 			end
 
 			def calc_time axis, e_a, b_a, e_b, b_b
@@ -118,7 +118,7 @@ module EntitySystem
 				# end
 				return unless valid_time? t
 				speed = calc_speed axis, e
-				pos = @components[[e, Component::Position]]
+				pos = @components[[e.id, Component::Position]]
 				# log({
 				# 	axis: axis,
 				# 	t: t,

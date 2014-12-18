@@ -15,6 +15,8 @@ module EntitySystem
 					h[k] = Set.new
 				elsif Array === k && k.length == 2
 					h[k + [:main]]
+				elsif Array === k && k.length == 3 && String === k[0]
+					h[k] = Set.new
 				end
 			end
 		end
@@ -48,16 +50,17 @@ module EntitySystem
 				end
 			else
 				entity = @entities[entity.id] || entity
-				component = @components[[entity, component.cla, component.id]] || component
+				component = @components[[entity.id, component.cla, component.id]] || component
 				# log :trying, :to, :add, entity.id, component.type, component.id, :to, self.id
 				return entity unless handles? entity, component
-				unless @components[[entity, component.cla, component.id]]
+				unless @components[[entity.id, component.cla, component.id]]
 					# log :adding, entity.id, component.type, component.id, :to, self.id
 					@entities[entity.id] = entity
 					@components_by_entity[entity.id] << [component.type, component.id]
 					# log id, entity.id, @components_by_entity[entity.id].to_a.map{|c|c.join ":"}.join(", ")
 					@components[component.cla] << [entity, component]
-					@components[[entity, component.cla, component.id]] = component
+					@components[[:all, entity.id, component.cla]] << component
+					@components[[entity.id, component.cla, component.id]] = component
 					handle_add entity, component
 				end
 			end
@@ -74,7 +77,7 @@ module EntitySystem
 				entity = @entities[raw_entity.id] #|| raw_entity
 				# log :no, :entity, raw_entity.id unless entity
 				return raw_entity unless entity
-				component = @components[[entity, raw_component.cla, raw_component.id]]
+				component = @components[[entity.id, raw_component.cla, raw_component.id]]
 				# unless component
 				# 	log :no, :component, raw_component.type, raw_component.id
 				# 	log @components.keys.select{|k|k.is_a?(Array) && k.length == 3}#.map{|k|[k[0].id, k[1].id, k[2]].join(":")}
@@ -93,7 +96,7 @@ module EntitySystem
 				end
 				@components.delete [entity, component.cla, component.id]
 				@components.delete_if do |cla, comps|
-					if comps.is_a? Set
+					if Class === cla && Set === comps
 						comps.delete_if do |e|
 							ientity, icomponent = *e
 							if ientity.id == entity.id && icomponent.type == component.type && icomponent.id == component.id
@@ -104,7 +107,9 @@ module EntitySystem
 							end
 						end
 						comps.empty?
-					elsif cla.is_a?(Array) && cla == [entity, component.cla, component.id]
+					elsif cla == [entity.id, component.cla, component.id]
+						true
+					elsif Array === cla && cla[0] == :all && cla[1] == entity.id
 						true
 					else
 						false
