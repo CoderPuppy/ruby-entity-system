@@ -5,7 +5,7 @@ module EntitySystem
 
 		def initialize game
 			@game = game
-			@paused = true
+			@paused = false
 			@entities = {}
 			@components_by_entity = Hash.new do |h, k|
 				h[k] = Set.new
@@ -33,12 +33,11 @@ module EntitySystem
 		def before; []; end
 
 		def paused?; @paused; end
-		def unpause
+		def pause
 			@paused = true
 			self
 		end
-
-		def pause
+		def unpause
 			@paused = false
 			self
 		end

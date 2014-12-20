@@ -84,7 +84,7 @@ module EntitySystem
 									@store.query_unloaded(type, k, v).each do |kv|
 										res << kv
 									end.onend do
-										if props.empty?
+										if Array === props
 											props = res.to_set
 										else
 											props &= res
@@ -106,7 +106,7 @@ module EntitySystem
 						e.each do |v|
 							res << v
 						end.onend do
-							if entities.empty?
+							if Array === entities
 								entities = res.to_set
 							else
 								entities &= res
@@ -196,6 +196,7 @@ module EntitySystem
 		end
 
 		def find_processes *processes
+			return @processes.to_a if processes.empty?
 			processes.map! do |process|
 				if process.is_a? Module
 					@process_classes[process].to_a
@@ -231,10 +232,26 @@ module EntitySystem
 		def disable *processes
 			processes = find_processes(*processes).to_set
 			processes.each do |process|
-				process.remove process.entities.first until process.entities.empty?
+				process.remove process.entities.first.last until process.entities.empty?
 			end
 			@processes -= processes
 			@ticking_processes.delete_if {|proc| processes.include? proc}
+			self
+		end
+
+		def pause *processes
+			processes = find_processes(*processes).to_set
+			processes.each do |process|
+				process.pause
+			end
+			self
+		end
+
+		def unpause *processes
+			processes = find_processes(*processes).to_set
+			processes.each do |process|
+				process.unpause
+			end
 			self
 		end
 
@@ -298,7 +315,7 @@ module EntitySystem
 			@store.tick
 			@ticking_processes.each do |process|
 				# log :ticking, process.id
-				process.tick
+				process.tick unless process.paused?
 			end
 		end
 	end

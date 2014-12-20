@@ -77,7 +77,7 @@ module EntitySystem
 					end
 				end
 			end
-			ids.onend(&onloaded["ids"]).each do |eid|
+			ids.each do |eid|
 				t = onloaded[eid]
 				@main_store.load(gte: "entity:#{eid}", lte: "entity:#{eid}\xFF") do
 					tt = onloaded["#{eid} components"]
@@ -96,7 +96,7 @@ module EntitySystem
 					end.onend &tt
 					t[]
 				end
-			end
+			end.onend &onloaded["ids"]
 		end
 
 		def unload *ids
@@ -189,7 +189,7 @@ module EntitySystem
 			val = GameStore.serialize val
 			prefix = "component<#{type}:-#{key}:#{val}"
 			@next_store.db
-				.range(gte: "#{prefix}:", lte: "#{prefix}:\xFF")
+				.range(gte: "#{prefix}:", lte: "#{prefix}:\xFF").lazy
 				.flat_map { |kv| @main_store.db.range(gte: "component>#{kv.last}", lte: "component>#{kv.last}").map{|kv|kv.last.split("-")} }
 				.map { |comp| comp[0...-1].map(&:to_i) + [comp.last] }
 		end
