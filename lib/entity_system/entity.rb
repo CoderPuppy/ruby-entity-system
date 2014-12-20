@@ -17,6 +17,17 @@ module EntitySystem
 
 		def type; @cla.id; end
 
+		def [] time
+			case time
+			when :next
+				@next
+			when :prev
+				@prev
+			else
+				raise ArgumentError, "Invalid time: #{time}"
+			end
+		end
+
 		def next= nxt
 			@game.store.update_component @cid, nxt, :next
 		end
