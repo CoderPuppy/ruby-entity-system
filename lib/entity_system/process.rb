@@ -48,6 +48,7 @@ module EntitySystem
 					add entity, comp
 				end
 			else
+				return unless component.enabled?
 				entity = @entities[entity.id] || entity
 				component = @components[[entity.id, component.cla, component.id]] || component
 				# log :trying, :to, :add, entity.id, component.type, component.id, :to, self.id

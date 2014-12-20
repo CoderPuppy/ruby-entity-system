@@ -5,7 +5,7 @@ module EntitySystem
 	# entity:<eid>:<component_type>:<id> = cid
 
 	# component:max
-	# component><cid> = <eid>-<id>-<cid>
+	# component><cid> = <eid>-<type>-<id>-<cid>
 	# component<<type>:<cid> = <cid>
 
 	# Timed Store
@@ -165,6 +165,18 @@ module EntitySystem
 			comp.to_i if comp
 		end
 
+		def enabled? cid
+			@main_store["component>#{cid}:disabled"] == nil
+		end
+
+		def enable cid
+			@main_store.delete "component>#{cid}:disabled"
+		end
+
+		def disable cid
+			@main_store["component>#{cid}:disabled"] = "true"
+		end
+
 		def query type, key, val, time = :next
 			type = type.id if type.respond_to? :id
 			val = GameStore.serialize val
@@ -172,7 +184,7 @@ module EntitySystem
 			from_time(time)
 				.range(gte: "#{prefix}:", lte: "#{prefix}:\xFF")
 				.map { |kv| @main_store["component>#{kv.last}"].split("-") }
-				.map { |comp| comp[0...-1].map(&:to_i) + [comp.last] }
+				.map { |comp| [comp[0].to_i, comp[1], comp[2], comp[3].to_i] }
 		end
 
 		def by_type type
@@ -181,7 +193,7 @@ module EntitySystem
 			@main_store
 				.range(gte: "#{prefix}:", lte: "#{prefix}:\xFF")
 				.map { |kv| @main_store["component>#{kv.last}"].split("-") }
-				.map { |comp| comp[0...-1].map(&:to_i) + [comp.last] }
+				.map { |comp| [comp[0].to_i, comp[1], comp[2], comp[3].to_i] }
 		end
 
 		def query_unloaded type, key, val
@@ -191,7 +203,7 @@ module EntitySystem
 			@next_store.db
 				.range(gte: "#{prefix}:", lte: "#{prefix}:\xFF").lazy
 				.flat_map { |kv| @main_store.db.range(gte: "component>#{kv.last}", lte: "component>#{kv.last}").map{|kv|kv.last.split("-")} }
-				.map { |comp| comp[0...-1].map(&:to_i) + [comp.last] }
+				.map { |comp| [comp[0].to_i, comp[1], comp[2], comp[3].to_i] }
 		end
 
 		def by_type_unloaded type
@@ -200,14 +212,14 @@ module EntitySystem
 			@main_store.db
 				.range(gte: "#{prefix}:", lte: "#{prefix}:\xFF")
 				.flat_map { |kv| @main_store.db.range(gte: "component>#{kv.last}", lte: "component>#{kv.last}").map{|kv|kv.last.split("-")} }
-				.map { |comp| comp[0...-1].map(&:to_i) + [comp.last] }
+				.map { |comp| [comp[0].to_i, comp[1], comp[2], comp[3].to_i] }
 		end
 
 		def add_component eid, id, component
 			cid = max_cid
 			self.max_cid += 1
 			type = component.class.id
-			@main_store["component>#{cid}"] = [eid, cid, id].join "-"
+			@main_store["component>#{cid}"] = [eid, type, id, cid].join "-"
 			@main_store["component<#{type}:#{cid}"] = cid
 			update_component cid, component, :next
 			update_component cid, component, :prev

@@ -15,6 +15,10 @@ module EntitySystem
 			@prev = Component.synthesize @game, @cla, @eid, @cid, :prev
 		end
 
+		def enabled?
+			@game.store.enabled? @cid
+		end
+
 		def type; @cla.id; end
 
 		def [] time
@@ -56,13 +60,14 @@ module EntitySystem
 			self
 		end
 
-		# This doesn't work
-		# def remove id
-		# 	@components.delete id
-		# 	@game.processes.each do |process|
-		# 		process.remove self if !process.handles? self
-		# 	end
-		# end
+		def remove cla, id = :main
+			comp = @components[[cla, id]]
+			@components.delete [cla, id]
+			@game.processes.each do |process|
+				process.remove self, comp
+			end
+			self
+		end
 
 		def list cla = nil
 			if cla
@@ -76,7 +81,7 @@ module EntitySystem
 			end
 		end
 
-		def [] cla, id = "main"
+		def [] cla, id = :main
 			if id == nil
 				list cla
 			else
@@ -94,9 +99,28 @@ module EntitySystem
 			end
 		end
 
-		def inspect
-			"#<Entity:#{@id}>"
+		def enable cla, id = :main
+			comp = self[cla, id]
+			@game.store.enable comp.cid
+			@game.processes.each do |process|
+				process.add self, comp
+			end
+			self
 		end
-		alias_method :to_s, :inspect
+
+		def disable cla, id = :main
+			comp = self[cla, id]
+			@components.delete [[cla, id]]
+			@game.store.disable comp.cid
+			@game.processes.each do |process|
+				process.remove self, comp
+			end
+			self
+		end
+
+		def inspect
+			"#e#{@id}"
+		end
+		alias to_s inspect
 	end
 end
