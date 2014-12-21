@@ -166,7 +166,7 @@ module EntitySystem
 		end
 
 		def enabled? cid
-			@main_store["component>#{cid}:disabled"] == nil
+			`#{@main_store["component>#{cid}:disabled"]} != 'true'`
 		end
 
 		def enable cid
@@ -283,6 +283,9 @@ module EntitySystem
 			when Boolean
 				type = "bool"
 				v = v ? "1" : "0"
+			when Module
+				type = "const"
+				v = v.name
 			else
 				raise "Can't find type for #{v.inspect}"
 			end
@@ -316,6 +319,8 @@ module EntitySystem
 				when "0"
 					false
 				end
+			when "const"
+				val = `$opal.cget(#{val})`
 			else
 				raise "Unknown type: #{type}"
 			end

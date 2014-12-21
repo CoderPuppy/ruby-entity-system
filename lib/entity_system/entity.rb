@@ -1,13 +1,14 @@
 module EntitySystem
 	class ComponentContainer
-		attr_reader :game
+		attr_reader :game, :entity
 		attr_reader :eid, :id
 		attr_reader :cla, :cid
 		attr_reader :next, :prev
 
-		def initialize game, eid, cla, cid, id
-			@game = game
-			@eid = eid
+		def initialize entity, cla, cid, id
+			@entity = entity
+			@game = entity.game
+			@eid = entity.id
 			@cla = cla
 			@cid = cid
 			@id = id
@@ -17,6 +18,22 @@ module EntitySystem
 
 		def enabled?
 			@game.store.enabled? @cid
+		end
+
+		def enable
+			@game.store.enable @cid
+			@game.processes.each do |process|
+				process.add @entity, self
+			end
+			self
+		end
+
+		def disable
+			@game.store.disable @cid
+			@game.processes.each do |process|
+				process.remove @entity, self
+			end
+			self
 		end
 
 		def type; @cla.id; end
@@ -94,27 +111,19 @@ module EntitySystem
 					# raise ArgumentError, "Bad ID: #{id} for #{self}[#{cla}]" unless cid
 					# log @id, cla.name, id, cid
 					return nil unless cid
-					@components[[cla, id]] = ComponentContainer.new(@game, @id, cla, cid, id)
+					@components[[cla, id]] = ComponentContainer.new(self, cla, cid, id)
 				end
 			end
 		end
 
 		def enable cla, id = :main
-			comp = self[cla, id]
-			@game.store.enable comp.cid
-			@game.processes.each do |process|
-				process.add self, comp
-			end
+			self[cla, id].enable
 			self
 		end
 
 		def disable cla, id = :main
-			comp = self[cla, id]
 			@components.delete [[cla, id]]
-			@game.store.disable comp.cid
-			@game.processes.each do |process|
-				process.remove self, comp
-			end
+			self[cla, id].disable
 			self
 		end
 
