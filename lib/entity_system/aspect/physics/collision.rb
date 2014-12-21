@@ -1,7 +1,7 @@
 module EntitySystem
 	Component::PhysicsCollision = Component.new box_id: :main
 	class Process::PhysicsCollision < Process
-		def after;[ Component::Velocity ];end
+		def after;[ Process::Velocity ];end
 
 		def handles? entity, component
 			case [component.type, true]
