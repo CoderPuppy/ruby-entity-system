@@ -9,6 +9,7 @@ module EntitySystem
 			@ticking_processes = []
 			@disabled_processes = Set.new
 			@process_classes = {}
+			@process_afters = {}
 			@entities = {}
 		end
 
@@ -190,6 +191,8 @@ module EntitySystem
 				@process_classes[cla] ||= Set.new
 				@process_classes[cla] << process
 			end
+			@process_afters[cla] ||= Set.new
+			@process_afters[cla] += process.after
 			sort
 			reassign process
 			process
@@ -214,9 +217,11 @@ module EntitySystem
 				process.entities.each do |entity|
 					process.remove entity
 				end
+				@process_afters.delete process.class
 			end
 			@processes -= processes
 			@ticking_processes.delete_if {|proc| processes.include? proc}
+			sort
 			self
 		end
 
@@ -256,49 +261,10 @@ module EntitySystem
 		end
 
 		def sort
-			afters = {}
-			processes = Hash[@processes.map { |process| [process.id, process] }]
-			processes.each do |id, process|
-				t = Set.new(process.after.map(&:id).select{|id|processes.include? id})
-				afters[process.id] = [t, [t.dup]]
-			end
-			processes.each do |id, process|
-				process.before.each do |before|
-					next unless afters[before.id]
-					next unless processes.include? id
-					afters[before.id].first << id
-					afters[before.id].last.last << id
-				end
-			end
-			while true
-				any = false
-				afters.each do |k, after|
-					new_procs = Set.new
-					after.last.last.each do |id|
-						pafter = afters[id].first
-						unless pafter.empty?
-							any = true
-							new_procs.merge pafter
-							if pafter.include? k
-								raise "Cyclic Dependency between #{k} and #{id}"
-							end
-						end
-					end
-					after.first.merge new_procs
-					after.last << new_procs
-				end
-				break unless any
-			end
-			@ticking_processes.sort! do |a, b|
-				a_after = afters[a.id].first
-				b_after = afters[b.id].first
-				if a_after.include? b.id
-					1
-				elsif b_after.include? a.id
-					-1
-				else
-					1
-				end
+			@ticking_processes = @process_afters.tsort.map do |cla|
+				(@process_classes[cla] || []).first
+			end.select do |proc|
+				proc.respond_to? :tick
 			end
 		end
 
