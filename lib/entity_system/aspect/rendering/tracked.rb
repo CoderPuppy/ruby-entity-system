@@ -65,7 +65,7 @@ module EntitySystem
 			@tracked = tracked
 		end
 
-		def after;[ Process::Tracked, Process::Render ];end
+		def after;[ Process::Tracked, Process::Render, Process::PhysicsCollision ];end
 
 		def handles? entity
 			false
