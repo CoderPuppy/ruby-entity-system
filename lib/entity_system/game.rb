@@ -9,7 +9,6 @@ module EntitySystem
 			@ticking_processes = []
 			@disabled_processes = Set.new
 			@process_classes = {}
-			@process_afters = {}
 			@entities = {}
 		end
 
@@ -191,8 +190,6 @@ module EntitySystem
 				@process_classes[cla] ||= Set.new
 				@process_classes[cla] << process
 			end
-			@process_afters[cla] ||= Set.new
-			@process_afters[cla] += process.after
 			sort
 			reassign process
 			process
@@ -217,10 +214,12 @@ module EntitySystem
 				process.entities.each do |entity|
 					process.remove entity
 				end
-				@process_afters.delete process.class
+			end
+			@process_classes.delete_if do |cla, procs|
+				procs -= processes
+				procs.empty?
 			end
 			@processes -= processes
-			@ticking_processes.delete_if {|proc| processes.include? proc}
 			sort
 			self
 		end
@@ -229,7 +228,6 @@ module EntitySystem
 			processes = find_processes(*processes)
 			reassign *processes
 			@processes += processes
-			@ticking_processes += processes
 			sort
 			self
 		end
@@ -240,7 +238,7 @@ module EntitySystem
 				process.remove process.entities.first.last until process.entities.empty?
 			end
 			@processes -= processes
-			@ticking_processes.delete_if {|proc| processes.include? proc}
+			sort
 			self
 		end
 
@@ -261,11 +259,21 @@ module EntitySystem
 		end
 
 		def sort
-			@ticking_processes = @process_afters.tsort.map do |cla|
+			afters = Hash.new do |h, k|
+				h[k] = Set.new
+			end
+			@processes.each do |process|
+				afters[process.class] += process.after
+				process.before.each do |cla|
+					afters[cla] << process.class
+				end
+			end
+			@ticking_processes = afters.tsort.map do |cla|
 				(@process_classes[cla] || []).first
 			end.select do |proc|
 				proc.respond_to? :tick
 			end
+			self
 		end
 
 		def save
